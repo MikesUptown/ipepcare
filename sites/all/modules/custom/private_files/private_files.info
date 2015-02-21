@@ -1,0 +1,5 @@
+name = Private Files
+description = Truly private files for the private file system.
+core = 7.x
+version = "7.x-1.0"
+files[] = private_files.module

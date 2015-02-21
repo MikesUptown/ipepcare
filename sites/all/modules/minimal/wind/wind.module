@@ -1,0 +1,1105 @@
+<?php
+
+/**
+ * Implements hook_block_info().
+ */
+function wind_block_info() {
+
+  $blocks = array();
+
+  $blocks['user_login_via_wind']['info'] = t('User login via WIND');
+  $blocks['user_login_via_wind']['cache'] = DRUPAL_NO_CACHE;
+  
+  /*HSL custom addition to create brief status and login/logout link block*/ 
+  $blocks['user_login_wind_brief_status']['info'] = t('User login status and brief login link via WIND');
+  $blocks['user_login_wind_brief_status']['cache'] = DRUPAL_NO_CACHE;
+  
+    /*HSL custom addition to create a more verbose status and login/logout link block*/ 
+  $blocks['user_login_wind_chatty_status']['info'] = t('User login status and styled login button via WIND');
+  $blocks['user_login_wind_chatty_status']['cache'] = DRUPAL_NO_CACHE;
+  
+  return $blocks;
+
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function wind_block_view($block_name = '') {
+  global $base_path;
+  global $user;
+  
+  $block=array();
+
+  switch ($block_name) {
+    case 'user_login_via_wind':
+      /**
+       * For usability's sake, avoid showing two login forms on one page or when already logged in
+       */
+      if ((!$user->uid) && (!(arg(0) == 'user'))){
+      	//set a generic block title	
+      	$block['subject'] = t('WIND Login');
+      	$destination = drupal_get_destination();
+        $block['content'] = drupal_get_form('wind_login_form', $login_type = 'button',  $destination);
+      }
+      else {
+        $block['subject'] = NULL;
+        $block['content'] = NULL;
+      }
+    break;
+    /*HSL custom content*/ 
+    case 'user_login_wind_brief_status':
+      if (!$user->uid){	
+      	 $block['subject'] = t('WIND Login');
+      	 $destination = drupal_get_destination();
+      	 $block['content'] = drupal_get_form('wind_login_form', $login_type = 'link',  $destination);
+      }
+      else{
+      	//if ldap set, use nice pretty first name value
+      	$account = user_load($user->uid);
+      	$firstnamefield = variable_get('wind_profile_firstname', 'field_profile_firstname');
+      	$userobj = entity_metadata_wrapper('user', $account);
+        $firstname = $userobj->$firstnamefield->value();
+      	if($firstname){   
+      	}
+      	else{
+      		//if ldap is not enabled or did not return a first name, then use ugly basic drupal username
+      		$firstname = $userobj->name->value(); 
+      	}
+      	
+      	//create a custom mini status block with logout link and link to My Accounts page
+      	$block['subject'] = t('');
+      	$block['content'] = '<ul class="menu clearfix"><li class="first last leaf">Hi ' . $firstname . ', <a href="'.$base_path.'user/logout">Log out</a></li><li class="leaf"><a href="'.$base_path.'my-accounts">My Accounts</a></li></ul>';      	   
+      }	  
+     break;
+
+    //HSL custom content continued
+    case 'user_login_wind_chatty_status':
+      if (!$user->uid){	
+      	 $block['subject'] = t('WIND Login');
+      	 $destination = drupal_get_destination();
+      	 $block['content'] = drupal_get_form('wind_login_form', $login_type = 'button', $destination);
+      }
+      else{
+      	//if ldap set, use nice pretty first name value
+      	$account = user_load($user->uid);
+      	$userobj = entity_metadata_wrapper('user', $account);
+      	$firstnamefield = variable_get('wind_profile_firstname', 'field_profile_firstname');
+      	$lastnamefield = variable_get('wind_profile_lastname', 'field_profile_lastname');
+        $firstname = $userobj->$firstnamefield->value();
+        $lastname = $userobj->$lastnamefield->value();
+      	if($firstname && $lastname){   
+      	  $name = $firstname.' '.$lastname;
+     	}
+      	else{
+      	  //if ldap is not enabled or did not return a first name, then use ugly basic drupal username
+      	  $name = $userobj->name->value(); 
+      	}
+
+      	//if user is logged in create an 'Account Status' div that indicates their off campus access to library resources permissions
+      	$block['subject'] = t('');
+      	 
+      	//check to see if user has the HSL role indicates off campus access to library resources
+      	$e_access_role = user_role_load_by_name('E-Resource Access');
+      	if(array_key_exists($e_access_role->rid, $user->roles)){
+      	  $block['content']	='<div class="wind-block-account-status-ok">';
+      	}
+      	else{
+      	  $block['content']	='<div class="wind-block-account-status-denied">';	
+      	}
+      	//display who is logged in
+      	$block['content'] .= '<h3>Account Status</h3><p>You are logged in as <strong>' . $name . '.</strong>';
+        
+      	if(array_key_exists($e_access_role->rid, $user->roles)){
+      	  $block['content'] .= '<br/>You are permitted off campus access to electronic resources.<br/>';
+      	}
+      	else{
+      		$block['content'] .= '</p><p>You are <strong>NOT</strong> permitted off campus access to electronic resources, however you may access all electronic resources when on the medical center network. If you believe you should have access to electronic resources from off campus please contact your department administrator.
+      		Your department administrator may be able to adjust the permissions associated with your UNI depending on your unique situation. If your department administrator has questions please have them 
+      		contact Susan Klimley, Serial Collection & Electronic Resources Librarian, at <a href="mailto:klimley@columbia.edu">klimley@columbia.edu.</a></p><p>';
+      	}    
+		//provide obvious way to logout after checking permissions
+      	$block['content'] .= 'Would you like to <a href="'.$base_path.'user/logout">log out</a> of the website?</p></div>';
+      	      	    
+      }	//end of if logged in content  
+     break;
+     /*end custom content*/ 
+    }
+     return $block;
+}
+
+/**
+ * form hook to construct login form
+ * 
+ * passes the 'destination' page which is the page that the user was just on so that after logging in they can be redirected
+ * to their previous page
+ */
+function wind_login_form($form, &$form_state, $login_type, $destination){
+  global $base_url;
+  //set destination page in session
+  $wind_destination_path = $destination['destination'];
+  $_SESSION['wind_destination_path']=$wind_destination_path;
+
+  //for troubleshooting
+  //dpm($destination);
+  
+  $wind_login_url = variable_get('wind|wind_service|login_url');
+  
+  $return_url = url('user/wind', $options = array('absolute' => TRUE ));
+  
+  $wind_service = variable_get('wind_service', 'cumchsl');
+  
+  $form['#action'] = $wind_login_url;
+  
+  $form['destination'] = array(
+    '#type' => 'hidden',
+    '#value' => $return_url,
+    );
+    
+  $form['service'] = array(
+    '#type' => 'hidden',
+    '#value' => $wind_service,
+    );
+	
+   //@todo: make the class of creating a button more generic so that it is applicable outside HSL
+   //@todo: make the login text changeable by admins from the browser
+   switch($login_type){
+  	case 'button':
+  	 $form['login'] = array(
+  	   '#markup' => '<p><a class="button30px" href="#" onclick="document.forms[\'wind-login-form\'].submit();">user</a> | <a href="'.$base_url.'/user">admin</a></p>',
+  	  );
+    break; 
+     
+  	case 'link':
+  	  $form['login'] = array(
+  	    '#markup' => '<p><a href="#" onclick="document.forms[\'wind-login-form\'].submit();">Log in</a></p>',
+
+  	  );
+    break;
+  
+  }  
+  return $form; 
+}
+
+/**
+ * Implements hook_help().
+ */
+function wind_help($path, $arg) {
+
+  switch ($path) {
+    case 'admin/help#wind':
+      $result  = '';
+      $result .= '<h3>' . t('About') . '</h3>';
+      $result .= '<p>' . t('WIND is a web authentication system which will verify that a person using a web browser can authenticate using a <a href="@uni">UNI</a>. A "UNI" is a username in Columbia\'s Kerberos authentication system.', array('@uni' => 'http://www.columbia.edu/acis/access/secure/uni.html')) . '</p>';
+      $result .= '<p>' . t('WIND was developed in order to allow web application developers to confirm a visitor\'s affiliation with Columbia without ever directly requesting a Columbia password. In order to authenticate, the visitor is redirected to Columbia\'s central secure web server.') . '</p>';
+      $result .= '<p>' . t('The design of WIND closely follows the Yale <a href="@cas">Central Authentication System</a> (CAS). Some features have been added to meet local needs, and to allow us to replace legacy web authentication methods. WIND implements a modified version of the new CAS 2.0 protocol, allowing for proxiable credentials for use by portals, as well as some improvements over the earlier WIND version.', array('@cas' => 'http://www.yale.edu/tp/auth/cas20.html')) . '</p>';
+
+    return $result;
+
+  }
+
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function wind_preprocess(&$variables, $hook) {
+
+  global $user;
+
+  /**
+   * Corrects a problem with the "Expires" header in Internet Explorer 8.
+   */
+  if ($user->uid) {
+    drupal_add_http_header('Expires', 'Thu, 01 Dec 1994 16:00:00 GMT');
+  }
+
+  return TRUE;
+
+}
+
+/**
+ *  Function creates the admin configuration form
+ *  
+ *  *removed many settings (but not all) from original module that were not applicable for HSL*
+ */
+
+function wind_admin_settings() {
+
+  $form['wind']['wind_service'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('WIND Service'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['wind']['wind_service']['wind|wind_service|login_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Login URL'),
+    '#default_value' => variable_get('wind|wind_service|login_url'),
+    '#size' => 30,
+    '#maxlength' => 255,
+    '#description' => t('The URL for a user to login to the WIND service.'),
+  );
+
+  $form['wind']['wind_service']['wind|wind_service|logout_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Logout URL'),
+    '#default_value' => variable_get('wind|wind_service|logout_url'),
+    '#size' => 30,
+    '#maxlength' => 255,
+    '#description' => t('The URL for a user to logout of the WIND service.'),
+  );
+
+  $form['wind']['wind_service']['wind|wind_service|validate_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Validate URL'),
+    '#default_value' => variable_get('wind|wind_service|validate_url'),
+    '#size' => 30,
+    '#maxlength' => 255,
+    '#description' => t('The URL to validate a user at the WIND service.'),
+  );
+
+   $form['wind']['messages'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Messages'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['wind']['messages']['wind|messages|not_authorized'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Not Authorized'),
+    '#rows' => 5,
+    '#cols' => 64,
+    '#default_value' => variable_get('wind|messages|not_authorized'),
+    '#description' => t('Message for users who are not authorized to login to this system.'),
+    '#required' => TRUE,
+  );
+  
+  $form['wind']['user_information'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('User Information'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['wind']['user_information']['wind|user_information|user_name_suffix'] = array(
+    '#type' => 'textfield',
+    '#title' => t('User Name Suffix'),
+    '#default_value' => variable_get('wind|user_information|user_name_suffix'),
+    '#description' => t('Append this suffix to all created users. This can help separate user accounts automatically created through WIND vs. native drupal accounts. For example, you might set this to "@columbia.edu" so all user names are their e-mail addresses.'),
+    '#size' => 60,
+    '#maxlength' => 100,
+  );
+
+  $form['wind']['external_data_source'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('External Data Source'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+ $form['wind']['external_data_source']['wind|external_data_source|validate_user_via_uni'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Validate User via UNI'),
+    '#default_value' => variable_get('wind|external_data_source|validate_user_via_uni'),
+    '#description' => t('If enabled, the external data source will be queried against the UNI from the created user accounts. Only users with authorized UNIs will be permitted to login to this system.'),
+    '#required' => FALSE,
+  );
+
+  $form['wind']['external_data_source']['wind|external_data_source|validate_user_via_affiliations'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Validate User via Affiliations'),
+    '#default_value' => variable_get('wind|external_data_source|validate_user_via_affiliations'),
+    '#description' => t('If enabled, the external data source will be queried against the affiliations from the created user accounts. Only users with authorized affiliations will be permitted to login to this system.'),
+    '#required' => FALSE,
+  );
+
+  $form['wind_email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default E-mail Domain'),
+    '#default_value' => variable_get('wind_email', 'columbia.edu'),
+    '#description' => t('This will set the email address for the user automatically, when the account is created. Do NOT include the "@" sign, so e.g. "columbia.edu".'),
+    '#size' => 60,
+    '#maxlength' => 100,
+    '#required' => TRUE,
+  );
+
+  $form['wind_service'] = array(
+    '#type' => 'textfield',
+    '#title' => t('WIND service realm'),
+    '#default_value' => variable_get('wind_service', 'cumc-modauth'),
+    '#description' => t('The service realm for this website. This is assigned by the WIND group. Ex. "law-web".'),
+    '#size' => 60,
+    '#maxlength' => 100,
+    '#required' => TRUE,
+  );
+
+  $form['wind_login_element'] = array(
+    '#type' => 'textfield',
+    '#title' => t('CSS selector to bind the WIND login link on double-click'),
+    '#default_value' => variable_get('wind_login_element', ''),
+    '#description' => t('A valid CSS selector. <em>Example: body, #primary, div.my-class</em>.'),
+    '#required' => FALSE,
+  );
+
+  $form['wind_login_autocreate'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow auto-creation of WIND users when they log in?'),
+    '#default_value' => variable_get('wind_login_autocreate', 0),
+    '#required' => FALSE,
+  );
+
+  $form['wind_ldap'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('LDAP / Profile Module Settings'),
+    '#collapsible' => (variable_get('wind_ldap_query', FALSE) ? FALSE : TRUE),
+    '#collapsed' => (variable_get('wind_ldap_query', FALSE) ? TRUE : TRUE),
+  );
+
+  $form['wind_ldap']['wind_ldap_query'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Fetch data from LDAP'),
+    '#default_value' => variable_get('wind_ldap_query', FALSE),
+    '#description' => t('If enabled, the LDAP data source will be queried against the UNI from the created user accounts. Only matching profile fields will be populated.'),
+  );
+
+  $form['wind_ldap']['wind_field_uni'] = array(
+    '#type' => 'textfield',
+    '#title' => t('UNI field name'),
+    '#default_value' => variable_get('wind_field_uni', 'field_uni'),
+    '#description' => t('System name of the profile field for UNI. <em>Example: field_uni</em>'),
+    '#required' => FALSE,
+  );
+
+  $form['wind_ldap']['wind_profile_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Name field name'),
+    '#default_value' => variable_get('wind_profile_name', 'field_profile_name'),
+    '#description' => t('System name of the field for (full) name. <em>Example: field_profile_name</em>'),
+    '#required' => FALSE,
+  );
+
+  $form['wind_ldap']['wind_profile_firstname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('First Name field name'),
+    '#default_value' => variable_get('wind_profile_firstname', 'field_profile_firstname'),
+    '#description' => t('System name of the field for first name. <em>Example: field_profile_firstname</em>'),
+    '#required' => FALSE,
+  );
+
+  $form['wind_ldap']['wind_profile_lastname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Last Name field name'),
+    '#default_value' => variable_get('wind_profile_lastname', 'field_profile_lastname'),
+    '#description' => t('System name of the field for last name. <em>Example: field_profile_lastname</em>'),
+    '#required' => FALSE,
+  );
+
+  $form['wind_ldap']['wind_profile_email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('E-mail field name'),
+    '#default_value' => variable_get('wind_profile_email', 'field_profile_email'),
+    '#description' => t('System name of the field for Email. <em>Example: field_profile_email</em>'),
+    '#required' => FALSE,
+  );
+
+  $form['wind_ldap']['wind_profile_phone'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Phone field name'),
+    '#default_value' => variable_get('wind_profile_phone', 'field_profile_phone'),
+    '#description' => t('System name of the field for phone number. <em>Example: field_profile_phone</em>'),
+    '#required' => FALSE,
+  );
+
+  $form['wind_ldap']['wind_profile_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title field name'),
+    '#default_value' => variable_get('wind_profile_title', 'field_profile_title'),
+    '#description' => t('System name of the field for title. <em>Example: field_profile_title</em>'),
+    '#required' => FALSE,
+  );
+  
+    $form['wind_ldap']['wind_profile_telephone'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title field name'),
+    '#default_value' => variable_get('wind_profile_telephone', 'field_profile_phone'),
+    '#description' => t('System name of the field for telephone. <em>Example: field_profile_phone</em>'),
+    '#required' => FALSE,
+  );
+
+  unset($form['wind_ldap']);
+  
+  $result = system_settings_form($form);
+
+  return $result;
+
+}
+
+/**
+ * Create a new user.
+ * 
+ * This function was altered considerably from the original module
+ * pulled out the adding of ldap info and setting of roles into separate functions to keep it easier for me to understand -srk
+ */
+function wind_create_user($wind_uni) {
+
+  global $user;
+  
+ //Save current UID, so we don't lose current user during operation.
+  $current_uid = $user->uid;
+
+  //Check if this is a valid user. Don't allow auto-creation, if not allowed.
+  if ((!$current_uid) && (!variable_get('wind_login_autocreate', 0))) {
+    return drupal_goto('', array('query' => array('time' => time())));
+  }
+
+  $user_name_suffix = variable_get('wind|user_information|user_name_suffix');
+  $module = 'wind';
+  $username = "{$wind_uni}{$user_name_suffix}";
+
+  $email_suffix = variable_get('wind_email', 'columbia.edu');
+
+  if ($email_suffix) {
+    $mail = "{$wind_uni}@{$email_suffix}";
+  }
+  /**
+   * Become admin (uid 1) to be able to save profile information.
+   * See http://drupal.org/node/218104 on how to safely impersonate another user
+   */
+  $original_user = $user;
+  $old_state = drupal_save_session();
+  drupal_save_session(FALSE);
+  $user = user_load(1);
+
+ $userinfo = array(
+   'name' => $username,
+   'pass' => user_password(),
+   'mail' => $mail,
+   'signature_format' => 'filtered_html',
+   'init' => $mail,
+   'status' => 1,
+  );
+    
+  //save new user
+  $new_user = user_save('', $userinfo);
+  
+  //go back to original user
+  $user = $original_user;
+  drupal_save_session($old_state);
+  
+  //@todo: add check for variables dictating whether to authenticate against ldap and affils
+  //if ldap enabled update with ldap info
+  if (variable_get('wind_ldap_query', FALSE) && ($new_user)) {
+    wind_get_ldap($new_user);  
+  }
+  
+  if($new_user){
+  	wind_set_roles($new_user);
+  } 	
+ 
+  return $new_user; 
+    
+}
+
+/**
+ * Function that queries ldap records and updates account
+ */
+function wind_get_ldap($existing_user){
+ /**
+   * Become admin (uid 1) to be able to save profile information.
+   * See http://drupal.org/node/218104 on how to safely impersonate
+   * another user
+   */
+  
+  global $user;  
+  $original_user = $user;
+  $old_state = drupal_save_session();
+  drupal_save_session(FALSE);
+  $user = user_load(1);
+ 
+  $user_name = explode('@', $existing_user->name);
+  $wind_uni = $user_name[0];
+
+  //use entity api helper
+  $userobj = entity_metadata_wrapper('user', $existing_user);
+  
+  // Set the initial value of the LDAP user as NULL.
+  $ldap_user = NULL;
+
+  //Connect to the Columbia University LDAP server.
+  $ldap_ds = ldap_connect('ldap.columbia.edu');
+  // Bind to the LDAP directory.
+  $ldap_r = ldap_bind($ldap_ds);
+  // Search LDAP tree.
+  $ldap_sr = ldap_search($ldap_ds, 'ou=People,o=Columbia University,c=US', 'UNI=' . $wind_uni);
+  //Get all result entries.
+  $ldap_info = ldap_get_entries($ldap_ds, $ldap_sr);
+  if (($ldap_info) && (is_array($ldap_info))) {
+  	//If the count is greater than 0, get the first match. There should be only one item in the array, unless there is a non-unique UNI.
+    if ($ldap_info['count'] > 0) {
+      $ldap_user = $ldap_info[0];     
+          //this used to be the preparation of $profile_fields array 
+          //had difficulty getting it to work with new non profile module set up so decided to use 
+          //entity api method mentioned here: http://drupal.org/node/1047600#comment-4923198 -srk 12-20-11
+        
+   		$unifield = variable_get('wind_field_uni', 'field_uni'); 
+    	$userobj->$unifield = trim($wind_uni);
+    	$profilenamefield = variable_get('wind_profile_name', 'field_profile_name');
+    	$userobj->$profilenamefield = trim($ldap_user['cn'][0]);
+    	$firstnamefield = variable_get('wind_profile_firstname', 'field_profile_firstname');
+    	$userobj->$firstnamefield = trim($ldap_user['givenname'][0]);
+    	$lastnamefield = variable_get('wind_profile_lastname', 'field_profile_lastname');
+    	$userobj->$lastnamefield = trim($ldap_user['sn'][0]);
+        $emailfield = variable_get('wind_profile_email', 'field_profile_email');
+    	$userobj->$emailfield = trim($ldap_user['mail'][0]);
+    	$profilephonefield = variable_get('wind_profile_phone', 'field_profile_phone');
+        if($ldap_user['telephonenumber']){$userobj->$profilephonefield = trim($ldap_user['telephonenumber'][0]);} else {$userobj->$profilephonefield = 'not provided';};
+        $profiletitlefield = variable_get('wind_profile_title', 'field_profile_title'); 
+        $userobj->$profiletitlefield = trim($ldap_user['title'][0]);
+          
+        //Reset the user e-mail address to the e-mail address contained in the LDAP record.
+        //For greater accuracy, the e-mail address contained in the LDAP record is favored.
+         
+        $userobj->mail = $ldap_user['mail'][0];
+      }
+      //no ldap responses for this entry
+      else{
+      	$unifield = variable_get('wind_field_uni', 'field_uni'); 
+    	$userobj->$unifield = trim($wind_uni);
+      }
+    }    
+ 
+   //@todo:if failed...then what?
+    
+  //save 
+  $userobj->save();
+	
+  //go back to original user
+  $user = $original_user;
+	
+  return;
+}
+
+function wind_init() {
+
+  global $user;
+
+  /**
+   * Exempts WIND from Drupal's cache.
+   */
+  $q = ($q = filter_input(INPUT_GET | INPUT_POST, 'q', FILTER_SANITIZE_STRING)) ? $q : NULL;
+
+  if ($q == 'user/wind') {
+    $GLOBALS['conf']['cache'] = FALSE;
+  }
+
+  /**
+   * Don't process any further if currently logged in
+   */
+  if ($user->uid) {
+    return TRUE;
+  }
+
+
+  $_SESSION['UNI'] = (isset($_SESSION['UNI'])) ? $_SESSION['UNI'] : NULL;
+
+  $wind_uni = $_SESSION['UNI'];
+
+  /**
+   * Unset certain session variables, to prevent infinite loops.
+   */
+  unset($_SESSION['UNI'], $_SESSION['kitten_email'], $_SESSION['kitten_userlevel'], $_SESSION['kitten_loggedin']);
+
+  if (!empty($wind_uni)) {
+    $user_name_suffix = variable_get('wind|user_information|user_name_suffix');
+
+    $module = 'wind';
+    $username = "{$wind_uni}{$user_name_suffix}";
+
+    $email_suffix = variable_get('wind_email', 'columbia.edu');
+
+    if ($email_suffix) {
+      $mail = $wind_uni . '@' . $email_suffix;
+    }
+
+    if ($user_load_by_name = user_load_by_name($username)) {
+      $user = $user_load_by_name;
+    }
+    if($user->uid){
+    	//removed checks for legal and extra mod
+    	//@todo:should probably abstract this into a separate function to keep readability
+       $_SESSION['wind_destination_path'] = (isset($_SESSION['wind_destination_path'])) ? $_SESSION['wind_destination_path'] : NULL;
+            
+
+      if ($user->name) {
+        drupal_set_message(t('You are logged in as <strong>@username</strong>.', array('@username' => $username)));
+      }
+      
+      watchdog('user', 'Session opened for %name.', array('%name' => $user->name));
+      
+      if (!is_null($_SESSION['wind_destination_path'])) {
+      	return drupal_goto($_SESSION['wind_destination_path'], array('query' => array('time' => time())));
+      }
+      else {
+        return drupal_goto('', array('query' => array('time' => time())));
+      }
+ 
+    }
+    else {
+      /**
+       * Create user and log in as the new user.
+       */
+      $new_user = wind_create_user($wind_uni, TRUE);
+      $username = $new_user->name;
+
+      if ($username) {
+        drupal_set_message(t('You are logged in as <strong>@username</strong>.', array('@username' => $username)));
+        
+        watchdog('user', 'Session opened for new user %name.', array('%name' => $user->name));
+        
+        $_SESSION['wind_destination_path'] = (isset($_SESSION['wind_destination_path'])) ? $_SESSION['wind_destination_path'] : NULL;
+
+        if (!is_null($_SESSION['wind_destination_path'])) {
+          return drupal_goto($_SESSION['wind_destination_path'], array('query' => array('time' => time())));
+        }
+        else {
+          return drupal_goto('', array('query' => array('time' => time())));
+        }
+      }
+      else {
+        return drupal_goto('', array('query' => array('time' => time())));
+      }
+    }
+  }
+ return FALSE;
+}
+
+function wind_login($wind_destination_path = '') {
+
+ $wind_destination_path = ($input_get_wind_destination_path = filter_input(INPUT_GET, 'wind_destination_path', FILTER_SANITIZE_STRING)) ? $input_get_wind_destination_path : $wind_destination_path;
+   
+  $path = drupal_get_path('module', 'wind');
+
+  $service = variable_get('wind_service', 'cumchsl');
+
+  $windSecuritySettings = array(
+    'windService' => $service,
+    'windExpirationPeriod' => 14400,
+    'windTimeoutPeriod' => 14400,
+  );
+
+  require_once $path . '/WindSecurityManager.class.inc';
+
+  $wind = new WindSecurityManager($windSecuritySettings);
+
+  if (!$wind->isAuthorized()) {
+    return FALSE;
+  }
+
+ if ($wind_destination_path) {
+ 
+    $_SESSION['wind_destination_path'] = $wind_destination_path;
+
+    /**
+     * Adding timestamp, so destination pages are never cached.
+     */
+   drupal_goto($wind_destination_path, array('query' => array('time' => time())));
+  }
+  else {
+    /**
+     * Redirect to home page. Adding timestamp, so destination pages are never cached.
+     */
+    drupal_goto('', array('query' => array('time' => time())));
+  }
+
+  return FALSE;
+
+}
+
+/**
+ * Implements hook_menu().
+ */
+function wind_menu() {
+
+  $wind_destination_path = ($wind_destination_path = filter_input(INPUT_GET, 'wind_destination_path', FILTER_SANITIZE_STRING)) ? $wind_destination_path : '';
+
+  $items = array();
+
+  $items['admin/config/people/wind'] = array(
+    'title' => 'WIND',
+    'description' => 'Configure the auto-creation of accounts from users authenticated via WIND.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('wind_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wind'),
+    'weight' => 0,
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/config/people/wind/default'] = array(
+    'title' => 'WIND settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('wind_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wind'),
+    'weight' => 0,
+    'type' => MENU_DEFAULT_LOCAL_TASK
+  );
+
+  $items['user/wind'] = array(
+    'title' => 'WIND login',
+    'page callback' => 'wind_login',
+    'page arguments' => array($wind_destination_path),
+    'type' => MENU_CALLBACK,
+    'access callback' => TRUE,
+  );
+
+  return $items;
+
+}
+
+/**
+ * Implements hook_permission().
+ */
+function wind_permission() {
+
+  $result = array(
+    'administer wind' =>  array(
+      'title' => t('Administer WIND'),
+      'description' => t('Administer the WIND module.'),
+      'restrict access' => TRUE,
+    ),
+    'assign wind users' => array(
+      'title' => t('Assign WIND Users'),
+      'description' => t('Assign user who have been authenticated via WIND.'),
+      'restrict access' => TRUE,
+    ),
+  );
+
+  return $result;
+
+}
+
+/**
+ * Update an existing user.
+ * @existing_user is an object
+ * 
+ * @todo: add setting of roles to the update function for better accuracy
+ */
+function wind_update_user($existing_user) {
+  
+  $user_name = explode('@', $existing_user->name);
+  $wind_uni = $user_name[0];
+
+  //if ldap is enabled use wind_get_ldap to update profile 
+  if (variable_get('wind_ldap_query', FALSE)) {
+    if($success = wind_get_ldap($existing_user)){
+      	
+      return TRUE;	
+    }
+    //if ldap did not return result set watchdog error
+    else{
+      //$type = 'wind';
+     // $message = t('no ldap response for @user - incomplete update', array(@user => $existing_user->name));
+     // watchdog($type, $message, WATCHDOG_NOTICE);
+     return false;
+    }  
+  }  
+  //if not enabled
+  else{
+  	return false;
+  }
+ 
+}
+/**
+ *  function sets roles and extra info into extra fields
+ *  
+ *  Highly HSL customized
+ *  @todo: abstract affiliation to roles or extra info field so that it is reusable by others
+ */
+
+function wind_set_roles($existing_user){
+/**
+   * Become admin (uid 1) to be able to save profile information.
+   * See http://drupal.org/node/218104 on how to safely impersonate
+   * another user
+   */
+  
+  global $user;  
+  $original_user = $user;
+  $old_state = drupal_save_session();
+  drupal_save_session(FALSE);
+  $user = user_load(1);
+
+  //use entity api helper function
+  $userobj = entity_metadata_wrapper('user', $existing_user);	
+  
+$_SESSION['wind']['affiliations']['affil'] = (isset($_SESSION['wind']['affiliations']['affil'])) ? $_SESSION['wind']['affiliations']['affil'] : '';
+
+    //Populating roles. 
+    if (!empty($_SESSION['wind']['affiliations']['affil'])){
+      if(is_array($_SESSION['wind']['affiliations']['affil'])) {
+       foreach ($_SESSION['wind']['affiliations']['affil'] as $affiliation) {
+        
+      	//temporarily store existing extra affiliation values so they won't be overwritten
+      	$existing_extra_affils = $userobj->field_affils->value();
+      	//temporarily store exisiting role array (ie '$affiliation')
+        $existing_roles = $userobj->roles->value();
+        
+   		if(substr($affiliation, -21) == '.student:columbia.edu'){
+          	  if($role = user_role_load_by_name('Student')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);
+          	}
+        }  	
+        if(substr($affiliation, -24) == 'alumni.ldap:columbia.edu'){
+          	  if($role = user_role_load_by_name('Alumni')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);
+          	}
+        }  	
+        if($affiliation == 'cnet.restricted.local:columbia.edu'){
+           if($role = user_role_load_by_name('E-Resource Access')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles); 
+            }
+        }
+        elseif($affiliation == 'ss.ot.staff:columbia.edu'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('Support Staff'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'ad.bc.staff:columbia.edu'){
+            $new_extra_affils = array_merge($existing_extra_affils, array('Barnard Administrator'));
+            $userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'ad.tc.staff:columbia.edu'){
+            $new_extra_affils = array_merge($existing_extra_affils, array("Teacher's College Administrator"));
+            $userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'ad.ot.staff:columbia.edu'){
+            $new_extra_affils = array_merge($existing_extra_affils, array('CU Administrator'));
+            $userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'cul.staff:columbia.edu'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('CU Librarian'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'CUtrustee.ldap:columbia.edu'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('CU Trustee'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif(substr($affiliation, 0, 2) == 'bc'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('Barnard'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif(substr($affiliation, 0, 2) == 'tc'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array("Teacher's College"));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif(substr($affiliation, 0, 3) == 'uts'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('Union Theological Seminary'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'faculty:columbia.edu'){
+            if($role = user_role_load_by_name('CU Instructor')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles); 
+            }
+        }
+        elseif($affiliation == 'rs.ot.staff:columbia.edu'){
+            if($role = user_role_load_by_name('Researcher')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles); 
+            }
+        }
+        elseif(substr($affiliation, -17) == 'alum:columbia.edu'){
+             if($role = user_role_load_by_name('Alumni')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);  
+             }
+             if(substr($affiliation, 0, 1) =='y'){
+               $year = str_ireplace(array('y', 'alum:columbia.edu'), array('','') , $affiliation); 
+               $new_extra_affils = 'Alumni - '.$year; //extra info of year
+               $userobj->field_affils->set(array($new_extra_affils));
+             }  
+        }
+        elseif((substr($affiliation, 0, 12) == 'CUstudentdiv') && (substr($affiliation, -18) == '.ldap:columbia.edu')){
+        	if($role = user_role_load_by_name('Student')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);  
+            }
+            $division = str_ireplace(array('CUstudentdiv','.ldap:columbia.edu'), array('',''), $affiliation); 
+            $new_extra_affils = 'Student Division - '.$division; //extra info of division
+            $userobj->field_affils->set(array($new_extra_affils)); 
+        }
+        elseif($affiliation == 'NYPemployee.ldap:columbia.edu'){
+          	  if($role = user_role_load_by_name('NYPresbyterian Affiliated')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);
+          	}
+        }   
+        else{
+          	//if not a known affiliation/role then put in as an extra affil
+          	$new_extra_affils = array_merge($existing_extra_affils, array($affiliation));
+          	$userobj->field_affils->set($new_extra_affils);
+        }   	
+      	   
+        } //end of foreach
+      }//end of if array
+      
+      //repeat logic for situation where only one affil is returned 
+      else{
+      	$affiliation = $_SESSION['wind']['affiliations']['affil'];
+      	
+      	//temporarily store existing extra affiliation values so they won't be overwritten
+      	$existing_extra_affils = $userobj->field_affils->value();
+      	//temporarily store exisiting role array (ie '$affiliation')
+        $existing_roles = $userobj->roles->value();
+        
+        if(substr($affiliation, -21) == '.student:columbia.edu'){
+          	  if($role = user_role_load_by_name('Student')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);
+          	}
+        }  	
+        if(substr($affiliation, -24) == 'alumni.ldap:columbia.edu'){
+          	  if($role = user_role_load_by_name('Alumni')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);
+          	}
+        }  	
+        if($affiliation == 'cnet.restricted.local:columbia.edu'){
+           if($role = user_role_load_by_name('E-Resource Access')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles); 
+            }
+        }
+        elseif($affiliation == 'ss.ot.staff:columbia.edu'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('Support Staff'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'ad.bc.staff:columbia.edu'){
+            $new_extra_affils = array_merge($existing_extra_affils, array('Barnard Administrator'));
+            $userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'ad.tc.staff:columbia.edu'){
+            $new_extra_affils = array_merge($existing_extra_affils, array("Teacher's College Administrator"));
+            $userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'ad.ot.staff:columbia.edu'){
+            $new_extra_affils = array_merge($existing_extra_affils, array('CU Administrator'));
+            $userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'cul.staff:columbia.edu'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('CU Librarian'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'CUtrustee.ldap:columbia.edu'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('CU Trustee'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif(substr($affiliation, 0, 2) == 'bc'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('Barnard'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif(substr($affiliation, 0, 2) == 'tc'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array("Teacher's College"));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif(substr($affiliation, 0, 3) == 'uts'){
+          	$new_extra_affils = array_merge($existing_extra_affils, array('Union Theological Seminary'));
+          	$userobj->field_affils->set($new_extra_affils);
+        }
+        elseif($affiliation == 'faculty:columbia.edu'){
+            if($role = user_role_load_by_name('CU Instructor')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles); 
+            }
+        }
+        elseif($affiliation == 'rs.ot.staff:columbia.edu'){
+            if($role = user_role_load_by_name('Researcher')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles); 
+            }
+        }
+        elseif(substr($affiliation, -17) == 'alum:columbia.edu'){
+             if($role = user_role_load_by_name('Alumni')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);  
+             }
+             if(substr($affiliation, 0, 1) =='y'){
+               $year = str_ireplace(array('y', 'alum:columbia.edu'), array('','') , $affiliation); 
+               $new_extra_affils = 'Alumni - '.$year; //extra info of year
+               $userobj->field_affils->set(array($new_extra_affils));
+             }  
+        }
+        elseif((substr($affiliation, 0, 12) == 'CUstudentdiv') && (substr($affiliation, -18) == '.ldap:columbia.edu')){
+        	if($role = user_role_load_by_name('Student')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);  
+            }
+            $division = str_ireplace(array('CUstudentdiv','.ldap:columbia.edu'), array('','') , $affiliation); 
+            $new_extra_affils = 'Student Division - '.$division; //extra info of division
+            $userobj->field_affils->set(array($new_extra_affils)); 
+   
+        }
+        elseif($affiliation == 'NYPemployee.ldap:columbia.edu'){
+          	  if($role = user_role_load_by_name('NYPresbyterian Affiliated')){
+              $rolearray = array('rid' => $role->rid, 'name' => $role->name);
+              $new_roles = array_merge($existing_roles, $rolearray);	
+              $userobj->roles->set($new_roles);
+          	}
+        }
+        else{
+          	//@todo: if not a known affiliation/role then put in as an extra affil? or make new role. 
+          	$new_extra_affils = array_merge($existing_extra_affils, array($affiliation));
+          	$userobj->field_affils->set($new_extra_affils);
+        }   	
+      	  
+        } //end of else
+        
+    }//end of if session wind variables set
+
+  //save 
+  $userobj->save();
+
+  //go back to original user
+  $user = $original_user;
+  
+  return;
+}
+
+/*
+ * function closes the user session on the WIND server
+ */
+function wind_user_logout($account){
+  global $base_url;
+  $wind_logout_url = variable_get('wind|wind_service|logout_url');
+  
+   /**
+   * Destroy the current session manually because we are redirecting to the wind logout before the Drupal native logout
+   */
+  session_destroy();
+  
+  $user = drupal_anonymous_user();
+   
+  return drupal_goto("{$wind_logout_url}?destination={$base_url}&destinationtext=Back%20to%20Health%20Sciences%20Library&passthrough=1");	
+
+}

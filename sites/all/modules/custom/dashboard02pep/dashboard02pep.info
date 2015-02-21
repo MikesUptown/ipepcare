@@ -1,0 +1,5 @@
+name = iPEPcare Dashboard/iPEPcare Participants Form/Monitor PEP Form
+package = iPEPcare Module Development
+core = 7.x
+
+scripts[] = js/dashboard.js

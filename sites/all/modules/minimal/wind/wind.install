@@ -1,0 +1,156 @@
+<?php
+
+// $Id$
+
+/**
+ * @file
+ * The .install file is a PHP file that can define new tables, load data
+ * and implement conversions during updates.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function wind_install() {
+
+  /**
+   * Enable blocks.
+   */
+  $values = array(
+    array(
+      'module'  => 'wind',
+      'delta'    => 'user_login_via_wind',
+      'theme'    => 'bartik',
+      'status'  => 1,
+      'weight'   => 0,
+      'region'   => 'sidebar_first',
+      'pages'   => '',
+      'cache'   => -1,
+      )
+    );
+
+  $query = db_insert('block')->fields(array('module', 'delta', 'theme', 'status', 'weight', 'region', 'pages', 'cache'));
+
+  foreach ($values as $record) {
+    $query->values($record);
+  }
+
+  if (!$query->execute()) {
+    return FALSE;
+  }
+
+  /**
+   * Drupal assigns each module a weight. For most operations involving any module
+   * that defines a particular hook, the modules are invoked in order first by weight,
+   * then by name. The "wind" module should be set with a weight of "-1", which will
+   * result in invocation prior to the "menu" module which has a default weight of "0".
+   */
+  if (!db_query("UPDATE {system} SET weight = '-1' WHERE name = 'wind'")) {
+    return FALSE;
+  }
+
+  /**
+   * Sandbox Mode
+   */
+  variable_set('wind|sandbox_mode|enable', FALSE);
+
+  /**
+   * WIND Service
+   */
+  variable_set('wind|wind_service|login_url', 'https://wind.columbia.edu/login');
+  variable_set('wind|wind_service|logout_url', 'https://wind.columbia.edu/logout');
+  variable_set('wind|wind_service|validate_url', 'https://wind.columbia.edu/validate');
+
+  /**
+   * Messages
+   */
+  variable_set('wind|messages|not_authorized', 'You are not authorized to login to this system.');
+  variable_set('wind|messages|directions', NULL);
+
+  /**
+   * User Information
+   */
+  variable_set('wind|user_information|user_name_suffix', '');
+
+  /**
+   * External Data Source
+   */
+  variable_set('wind|external_data_source|enable', TRUE);
+  variable_set('wind|external_data_source|validate_user_via_uni', TRUE);
+  variable_set('wind|external_data_source|validate_user_via_affiliations', TRUE);
+
+  /**
+   * Role Mappings
+   */
+
+
+  /**
+   * LDAP
+   */
+  variable_set('wind_ldap_query', FALSE);
+
+  return TRUE;
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function wind_uninstall() {
+
+  /**
+   * WIND Service
+   */
+  variable_del('wind|wind_service|login_url');
+  variable_del('wind|wind_service|logout_url');
+  variable_del('wind|wind_service|validate_url');
+
+  /**
+   * Messages
+   */
+  variable_del('wind|messages|not_authorized');
+
+  /**
+   * User Information
+   */
+  variable_del('wind|user_information|user_name_suffix');
+
+  /**
+   * External Data Source
+   */
+  variable_del('wind|external_data_source|enable');
+  variable_del('wind|external_data_source|validate_user_via_uni');
+  variable_del('wind|external_data_source|validate_user_via_affiliations');
+
+  /**
+   * Role Mappings
+   */
+
+
+  /**
+   * LDAP
+   */
+  variable_del('wind_ldap_query');
+
+  return TRUE;
+
+}
+
+/**
+ * Implements hook_enable().
+ */
+function wind_enable() {
+
+  return TRUE;
+
+}
+
+/**
+ * Implements hook_disable().
+ */
+function wind_disable() {
+
+  return TRUE;
+
+}
+

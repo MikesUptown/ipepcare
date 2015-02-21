@@ -1,0 +1,10 @@
+; $Id$
+
+name = WIND
+description = "Allows authenication with Columbia University UNI."
+package = Minimal
+version = 7.x
+core = 7.x
+configure = admin/config/people/wind
+files[] = wind.test
+dependencies[] = entity

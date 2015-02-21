@@ -1,0 +1,28 @@
+#form01table-form
+{
+	float: left;
+	font-family: Helvetica;
+	font-size: 12px;
+	width: 72%;
+	/*border-style:dashed;*/
+}
+
+/*
+#ipepcare01participants-form label {
+  float:left;
+  width:190px;
+  text-align:right;
+  padding-right:10px;
+}
+*/
+
+#form01table-form textarea, #form01table-form .form-text { 
+  width:200px;
+}
+
+#form01table-form .description, #form01table-form .grippie, #form01table-form .form-submit {
+  float:right;
+  margin-right:60px;
+  width:200px;
+}
+

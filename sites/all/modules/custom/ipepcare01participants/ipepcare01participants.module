@@ -1,0 +1,528 @@
+<?php
+
+/**
+* Implements hook_permission().
+*/
+function ipepcare01participants_permission() {
+	return array(	
+		'submit ipepcare01participants' => array(
+		'title' => t('Submit ipepcare01participants'), 
+		'description' => t('Submit ipepcare01participants form.'), 
+		),
+	);
+}
+
+/**
+* Implements hook_menu().
+*/
+function ipepcare01participants_menu() { 
+		
+	$items['ipepcare_participants_form'] = array(
+	'title' => 'iPEPcare Participants', 
+	'type' => MENU_NORMAL_ITEM, 
+	'page callback' => 'ipepcare01participants_page',
+	'access callback' => 'user_access', 
+	'access arguments' => array('submit ipepcare01participants'),   //administer user
+	);
+
+	return $items;
+} 
+
+/**
+* Returns form render array.
+*/
+function ipepcare01participants_form($form, &$form_state) {
+
+	// Get the path to the module
+	$path = drupal_get_path('module', 'ipepcare01participants');
+
+	// Attach the CSS and JS to the form
+	$form['#attached'] = array('css' => array('type' => 'file', 'data' => $path . '/ipepcare02participants.css', ),
+
+	/*
+	 'js' => array
+	 (
+	 'type' => 'file',
+	 'data' => $path . '/form_theme.js',
+	 ),*/
+	);
+			
+	// PATIENT INFORMATION
+	$form['patient_info'] = array(
+	'#type' => 'fieldset', 
+	// '#suffix' => 'div id="patient_info_wrapper"></div>',
+	'#title' => t('Patient Info (<span class="expand-collapse" >click to open</span>)'),
+	'#collapsible' => TRUE,
+	'#collapsed' => TRUE,
+	);
+	$form['patient_info']['studyid'] = array(
+	'#title' => t('Study ID (New): '), 
+	'#type' => 'textfield', 
+	'#required' => TRUE,
+	'#size' => 7,
+	'#maxlength' => 7,
+	'#description' => t('[format must be 7 digits only]'),
+	//'#description' => t('Your full name, please'),
+	);
+	$form['patient_info']['firstname'] = array('#title' => t('First Name: '), '#type' => 'textfield', '#required' => TRUE,
+	'#size' => 30,
+	'#maxlength' => 64,
+	//'#description' => t('Your e-mail address.'),
+	);
+	$form['patient_info']['lastname'] = array('#title' => t('Last Name: '), '#type' => 'textfield', '#required' => TRUE,
+	'#size' => 30,
+	'#maxlength' => 64,
+	//'#description' => t('The company you are associated with, if any.'),
+	);
+	$form['patient_info']['date_birth'] = array(
+	'#title' => t('Date of Birth: '),
+	'#type' => 'textfield',	 
+	'#required' => TRUE,
+	'#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['patient_info']['sex'] = array('#title' => t('Sex: '), '#type' => 'select', '#required' => TRUE, '#options' => array('Male', 'Female', ),
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['patient_info']['insurance'] = array('#title' => t('Insurance: '), '#type' => 'textfield', '#required' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['patient_info']['type_medicaid'] = array('#title' => t('Type of Medicaid: '), '#type' => 'textfield',
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['patient_info']['pharmacist'] = array('#title' => t('Pharmacist'), '#type' => 'select',
+	//'#required' => TRUE,
+	'#options' => array('-Select-', 'None', 'Richard Balcharan', //'Richard Balcharan (pharmacist_01)'
+	'Brenda Johnson', //'Brenda Johnson (pharmacist_02)'
+	'Jennifer Haley', //'Jennifer Haley (pharmacist_03)'
+	), );
+
+	// CONTACT INFORMATION
+	$form['contact_info'] = array(
+	'#type' => 'fieldset',
+	'#suffix' => '<div id="contact_info_wrapper"></div>',
+	'#title' => t('Contact Info (<span class="expand-collapse" >click to open</span>)'),
+	'#collapsible' => TRUE,
+'#collapsed' => TRUE,
+	);
+	$form['contact_info']['phone_number_01'] = array('#title' => t('Phone Number(1): '),'#size' => 12, '#maxlength' => 12, '#type' => 'textfield',
+	'#description' => t('[format ex. 212-555-5555]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['contact_info']['phone_number_02'] = array('#title' => t('Phone Number(2): '),'#size' => 12, '#maxlength' => 12, '#type' => 'textfield',
+	'#description' => t('[format ex. 212-555-5555]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['contact_info']['street_address'] = array('#title' => t('Street Address: '), '#type' => 'textfield',
+	'#size' => 30,
+	'#maxlength' => 64,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['contact_info']['city'] = array('#title' => t('City: '), '#type' => 'textfield',
+	'#size' => 30,
+	'#maxlength' => 64,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['contact_info']['state'] = array('#title' => t('State: '), '#size' => 2, '#maxlength' => 2, '#type' => 'textfield', 
+	'#description' => t('[format ex. NY]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['contact_info']['zip'] = array('#title' => t('Zip: '), '#type' => 'textfield', '#size' => 5, '#maxlength' => 5,
+	'#size' => 5,
+	'#maxlength' => 5,
+	'#description' => t('[format ex. 10032]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	// Follow Up Appointments
+	// $form['follow_up_appointment'] = array('#type' => 'fieldset', '#title' => 'Follow Up Appointments', '#suffix' => '<div id="follow_up_appointment_wrapper"></div>', );
+	// $form['follow_up_appointment']['locator_call_expected'] = array('#title' => t('Locator Call Expected: '), '#type' => 'textfield', '#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	// );
+	
+	$form['follow_up_appointment'] = array(
+	'#type' => 'fieldset', 
+	// '#title' => 'Follow Up Appointments', 
+	// '#suffix' => '<div id="follow_up_appointment_wrapper"></div>', );
+	'#title' => t('Follow Ups (<span class="expand-collapse" >click to open</span>)'),
+	'#collapsible' => TRUE,
+	'#collapsed' => TRUE,
+	);
+	$form['follow_up_appointment']['locator_call_expected'] = array('#title' => t('Locator Call Expected: '), '#type' => 'textfield', '#required' => TRUE,	
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	
+	// $form['patient_info']['date_birth'] = array('#title' => t('Date of Birth: '), '#type' => 'textfield', '#required' => TRUE,
+	// '#resizable' => TRUE,
+	// '#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	// );
+
+	$form['follow_up_appointment']['locator_call_actual'] = array('#title' => t('Locator Call Actual: '), '#type' => 'textfield', '#required' => FALSE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	$form['follow_up_appointment']['v03_expected'] = array('#title' => t('V03 Expected: '), '#type' => 'textfield', '#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	$form['follow_up_appointment']['v03_expected_time'] = array('#title' => t('V03 Expected Time: '), '#type' => 'textfield', '#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	$form['follow_up_appointment']['v03_actual'] = array('#title' => t('V03 Actual: '), '#type' => 'textfield', '#required' => FALSE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	// PEP Requests
+	// $form['pep_request'] = array('#type' => 'textfield', '#title' => 'PEP Requests', '#suffix' => '<div id="pep_request_wrapper"></div>', );
+	
+	//FIRST PEP REQUEST
+	// $form['pep_request']['first_pep_request'] = array('#title' => t('First PEP Request: '), '#type' => 'textfield',
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	// );
+	
+	$form['pep_request'] = array(
+	'#type' => 'fieldset',
+	'#title' => t('PEP Requests (<span class="expand-collapse" >click to open</span>)'),
+	'#collapsible' => TRUE,
+	'#collapsed' => TRUE,
+	);
+	
+	$form['pep_request']['first_pep_request'] = array(
+	'#title' => t('First PEP Request: '), 
+	'#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	
+	$form['pep_request']['first_pep_eligibility'] = array(
+	'#title' => t('First PEP Eligibility: '), 
+	'#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	// '#description' => t('[format ex. 01/01/2013]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	
+	$form['pep_request']['first_pep_start_date'] = array(
+	'#title' => t('First PEP Start Date: '), 
+	'#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	//SECOND PEP REQUEST
+	$form['pep_request']['second_pep_request'] = array('#title' => t('Second PEP Request: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['pep_request']['second_pep_eligibility'] = array('#title' => t('Second PEP Eligibility: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['pep_request']['second_pep_start_date'] = array('#title' => t('Second PEP Start Date: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	//THIRD PEP REQUEST
+	$form['pep_request']['third_pep_request'] = array('#title' => t('Third PEP Request: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['pep_request']['third_pep_eligibility'] = array('#title' => t('Third PEP Eligibility: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['pep_request']['third_pep_start_date'] = array('#title' => t('Third PEP Start Date: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	//FOURTH PEP REQUEST
+	$form['pep_request']['fourth_pep_request'] = array('#title' => t('Fourth PEP Request: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['pep_request']['fourth_pep_eligibility'] = array('#title' => t('Fourth PEP Eligibility: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['pep_request']['fourth_pep_start_date'] = array('#title' => t('Fourth PEP Start Date: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	//FIFTH PEP REQUEST
+	$form['pep_request']['fifth_pep_request'] = array('#title' => t('Fifth PEP Request: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['pep_request']['fifth_pep_eligibility'] = array('#title' => t('Fifth PEP Eligibility: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+	$form['pep_request']['fifth_pep_start_date'] = array('#title' => t('Fifth PEP Start Date: '), '#type' => 'textfield',
+	'#size' => 10, '#maxlength' => 10,
+	//'#required' => TRUE,
+	//'#resizable' => TRUE,
+	//'#description' => t('Beta spaces are limited, but let us know if there is a really good reason to let you in.'),
+	);
+
+	$form['submit'] = array('#type' => 'submit', '#value' => 'Save This Form', );
+
+	return $form;
+}
+
+/**
+* Implementation of hook_theme().
+*/
+function ipepcare01participants_theme() {
+	
+	return array(
+'ipepcare01participants_theme' => array(
+'render element' => 'form'
+),
+);
+	
+}
+
+function theme_ipepcare01participants_form($variables) {
+	
+	// Our header information
+$header = array(
+// This is the magic that creates the 'select all' box
+theme('table_select_header_cell'), 
+array('data' => t('Node Title')),
+array('data' => t('Date Created')),
+);
+
+// A variable to hold the row information for each table row
+$rows = array();
+
+	foreach (element_children($form['title']) as $key) {
+$rows[] = array(//row
+'data' => array( //row data
+array( //Cell1
+// $form['nodes'] now contains individual checkbox form elements!
+'data' => drupal_render($form['studyid_01'][$key]),
+'class' => '',
+),
+array( //Cell2
+'data' => drupal_render($form['studyid_02'][$key]),
+'class' => '',
+),
+array( //Cell3
+'data' => drupal_render($form['studyid_03'][$key]),
+'class' => '',
+),
+),//endrow
+'class' => '', //row class
+);//endrow
+}
+	// With our data all formatted nicely, we can just use theme_table
+// To produce our table
+$output = theme('table', $header, $rows, array('class' => 'delete_nodes'));
+
+// The function drupal_render() Keeps track of all rendered elements
+// And makes sure it doesn't render the same item twice. Running
+// drupal_render on the form at the end just renders what's left:
+// the delete button
+$output .= drupal_render($form);
+
+// And we return the output
+return $output;	
+
+}
+
+/**
+* form validate.
+
+function ipepcare01participants_form_validate($form, &$form_state) {
+	//print('<pre>'.print_r($form_state['values'],1).'</pre>');die();
+
+	if (!is_numeric($form_state['values']['studyid'])) {//['values']
+		form_set_error('studyid', t('You must enter a valid number.'));
+		return FALSE;
+	}
+	
+	return TRUE;
+
+}
+*/
+
+/**
+* form validate: New
+*/ 
+function ipepcare01participants_form_validate($form, &$form_state) {
+	//print('<pre>'.print_r($form_state['values'],1).'</pre>');die();
+	
+	// Checks the validity of Patient First Name
+	$first_name = trim($form_state['values']['firstname']);
+	if (strlen($first_name) < 3) {
+		form_set_error('first_name', t('Check the first name; must have at least 3 letters.'));
+	}
+	else if (strlen($first_name) > 64) {
+		form_set_error('first_name', t('Check the first name; must be less than 64 letters.'));
+	}
+	else if (!preg_match('/^[A-Za-z\s]+$/', (string) $first_name)) {
+		form_set_error('first_name', t('Check the first name; can only have letters, dashes or quotes.'));
+	}	
+
+	// Checks the validity of Patient Last Name
+	$last_name = trim($form_state['values']['lastname']);
+	if (strlen($last_name) < 3) {
+		form_set_error('last_name', t('Check the last name; must have at least 3 letters.'));
+	}
+	else if (strlen($last_name) > 64) {
+		form_set_error('last_name', t('Check the last name; must be less than 64 letters.'));
+	}
+	else if (!preg_match('/^[A-Za-z\s]+$/', (string) $last_name)) {
+		form_set_error('last_name', t('Check the last name; can only have letters, dashes or quotes.'));
+	}
+
+	// Checks validity of Primary Phone Number
+	$phone_number_01 = trim($form_state['values']['phone_number_01']);
+	if (strlen($phone_number_01) < 12) {
+		form_set_error('phone_number_01', t('This phone number must have at least 12 digits.'));
+	}
+	else if (strlen($phone_number_01) > 15) {
+		form_set_error('phone_number_01', t('This phone number as entered is too long; must be less than 15 digits.'));
+	}
+	else if (!preg_match('/^[0-9()-xX\s]+$/', (string) $phone_number_01)) {
+		form_set_error('phone_number_01', t('This phone number can only have digits, parenthesis and dashes. Try again.'));
+	}	
+	
+		// Checks validity of Second Phone Number
+	$phone_number_02 = trim($form_state['values']['phone_number_02']);
+	if (strlen($phone_number_01) < 12) {
+		form_set_error('phone_number_02', t('This phone number must have at least 12 digits.'));
+	}
+	else if (strlen($phone_number_02) > 15) {
+		form_set_error('phone_number_02', t('This phone number as entered is too long; must be less than 15 digits.'));
+	}
+	else if (!preg_match('/^[0-9()-xX\s]+$/', (string) $phone_number_01)) {
+		form_set_error('phone_number_02', t('This phone number can only have digits, parenthesis and dashes. Try again.'));
+	}
+}
+
+/**
+* Submit handler.
+* Process the submit button.
+* Send an email to the iPEPcare research team'
+*/
+function ipepcare01participants_form_submit($form, &$form_state) {	
+	global $user;
+
+	$fe_id = db_insert('participants_form_test_01')
+	
+	-> fields(array(
+	
+	'uid' => $user -> uid, 
+	
+	'study_id' => $form_state['values']['studyid'], //['values']
+	'first_name' => $form_state['values']['firstname'], 'last_name' => $form_state['values']['lastname'], 'date_birth' => $form_state['values']['date_birth'], //varchar
+	'sex' => $form_state['values']['sex'], //varchar
+	'insurance' => $form_state['values']['insurance'], //varchar
+	'type_medicaid' => $form_state['values']['type_medicaid'], //varchar, MAX 100 Characters
+	'pharmacist' => $form_state['values']['pharmacist'], //varchar
+	'phone_number_01' => $form_state['values']['phone_number_01'], //varchar
+	'phone_number_02' => $form_state['values']['phone_number_02'], //varchar
+	'street_address' => $form_state['values']['street_address'], //varchar
+	'city' => $form_state['values']['city'], //varchar
+	'state' => $form_state['values']['state'], //varchar
+	'zip' => $form_state['values']['zip'], //varchar
+	'locator_call_expected' => $form_state['values']['locator_call_expected'], //varchar,
+	'locator_call_actual' => $form_state['values']['locator_call_actual'], //varchar,
+	'v03_expected' => $form_state['values']['v03_expected'], //varchar,
+	'v03_expected_time' => $form_state['values']['v03_expected_time'], //varchar,
+	'v03_actual' => $form_state['values']['v03_actual'], //varchar, ['follow_up_appointment']
+
+	//First PEP
+	'first_pep_request' => $form_state['values']['first_pep_request'], //varchar,['pep_request']
+	'first_pep_eligibility' => $form_state['values']['first_pep_eligibility'], //varchar,
+	'first_pep_start_date' => $form_state['values']['first_pep_start_date'], //varchar,
+	//Second PEP
+	'second_pep_request' => $form_state['values']['second_pep_request'], //varchar,
+	'second_pep_eligibility' => $form_state['values']['second_pep_eligibility'], //varchar,
+	'second_pep_start_date' => $form_state['values']['second_pep_start_date'], //varchar,
+	//Third PEP
+	'third_pep_request' => $form_state['values']['third_pep_request'], //varchar,
+	'third_pep_eligibility' => $form_state['values']['third_pep_eligibility'], //varchar,
+	'third_pep_start_date' => $form_state['values']['third_pep_start_date'], //varchar,
+	//Fourth PEP
+	'fourth_pep_request' => $form_state['values']['fourth_pep_request'], //varchar,
+	'fourth_pep_eligibility' => $form_state['values']['fourth_pep_eligibility'], //varchar,
+	'fourth_pep_start_date' => $form_state['values']['fourth_pep_start_date'], //varchar,
+	//Fifth PEP
+	'fifth_pep_request' => $form_state['values']['fifth_pep_request'], //varchar,
+	'fifth_pep_eligibility' => $form_state['values']['fifth_pep_eligibility'], //varchar,
+	'fifth_pep_start_date' => $form_state['values']['fifth_pep_start_date'], //varchar,
+	)) -> execute();
+
+	drupal_set_message(t('Thanks! Your iPEPcare Participants form has been saved.'));
+}
+
+/**
+* Menu callback.
+*/
+function ipepcare01participants_page() {
+	return drupal_get_form('ipepcare01participants_form');
+}

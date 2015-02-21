@@ -1,0 +1,334 @@
+<?php
+
+function dashboard02pep_permission(){
+	return array(
+    'access dashboard02pep' => array(
+      'title' => t('Access dashboard02pep'), 
+      'description' => t('Access dashboard02pep.'),
+    ),
+  );
+}
+
+/** 
+ * Implements hook_menu(). 
+ */  
+function dashboard02pep_menu() {
+	   
+  $items['dashboard'] = array( 
+    'title' => t('Dashboard'), 
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'dashboard_ipepcare',
+    'access callback' => 'user_is_logged_in', //TRUE 
+    'access arguments' => array('access dashboard02pep'), //'TRUE'
+  ); 
+  
+  $items['dashboard/ipepcare_participants'] = array( 
+    'title' => t('iPEPcare Participants'), 
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'dashboard_participants', 
+    'access callback' => 'user_is_logged_in', //TRUE
+    'access arguments' => array('administer access'), //'TRUE'
+  ); 
+
+  $items['dashboard/monitor_pep'] = array( 
+    'title' => t('Monitor PEP'), 
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'dashboard_monitor_pep', 
+    'access callback' => 'user_is_logged_in', //TRUE
+    'access arguments' => array('administer access'), //'TRUE'
+  ); 
+  
+  return $items; 
+} 
+
+function dashboard_ipepcare(){
+	return t('Use this Dashboard to check data from iPEP Participants Form and Monitor PEP Form.');
+}
+
+
+
+function dashboard_participants(){
+	
+	// return t('This is a Dashboard of iPEPcare Participants Form');
+    
+	
+	drupal_add_css(drupal_get_path('module', 'dashboard02pep') . '/dashboard02pep.css', 
+	array('group' => CSS_DEFAULT, 'type' => 'file'));
+	
+	/***iPEPcare Participant Dashboard***/
+	$results_01 = db_query("SELECT *FROM dr_participants_form_test_01"); //participants_form_test_01
+
+	$query = db_select('participants_form_test_01', 'n');
+
+    $query->join('users', 'u', 'n.uid = u.uid'); //JOIN node with users
+
+    $query->groupBy('u.uid');//GROUP BY user ID
+
+    $query->fields('n',array('uid','study_id'))//SELECT the fields from node
+    ->fields('u',array('name'))//SELECT the fields from user
+    ->orderBy('created', 'DESC')//ORDER BY created
+    ->range(0,10);//LIMIT to 2 records
+
+    $result = $query->execute();
+
+	$header_01 = array(t('Study_ID'), t('Date_Of_Birth'), t('Insurance'), t('Phone Number 01'), t('Phone Number 02'),
+		t('Locator Call Expected'),t('Locator Call Actual'),t('First PEP Request'), t('Second PEP Request'),t('Third PEP Request'), 
+		t('Fourth PEP Request'),t('Fifth PEP Request'),
+	);
+	
+	$rows_01 = array();
+	foreach($results_01 AS $result){
+
+		$rows_01[] = array(
+			// "<a href=\"/ipepcare_alpha/participants_form_edit/\">" . $result->study_id . '</a>',
+			
+			"<a href=\"https://secure.cumc.columbia.edu/ipepcare/ipepcare_participant_form?id=".$result -> id."\">".$result -> study_id."</a>",
+			$result -> date_birth,
+			$result -> insurance,
+			$result -> phone_number_01,
+			$result -> phone_number_02,
+			$result -> locator_call_expected,
+			$result -> locator_call_actual,
+			$result -> first_pep_request,
+			$result -> second_pep_request,
+			$result -> third_pep_request,
+			$result -> fourth_pep_request,
+			$result -> fifth_pep_request,
+		);
+	}
+
+	$caption_ipepcare_participant = t('iPEPcare Participant Form Dashboard');
+	$ipepcare_table = theme('table', array(
+		'header' => $header_01, 
+		'rows' => $rows_01,
+		'style' => 'font-size:12px','color: red;','background-color: LightGrey;',
+		'caption' => $caption_ipepcare_participant
+		)
+	);	
+	return "$ipepcare_table";
+}
+
+function dashboard_monitor_pep(){
+	// return t('This is a Dashboard of Monitor PEP');
+/*	$filter1 = "";
+        
+        
+        if(isset($_GET['studyid'])) {
+            $studyidfilter = $_GET['studyid'];
+           
+        } else {
+            $studyidfilter = "";
+        }
+        if(isset($_GET['pharmacist'])) {
+             $pharmacistfilter = $_GET['pharmacist'];
+        } else {
+            $pharmacistfilter = "";
+        }
+        if(isset($_GET['physician'])) {
+              $physicianfilter = $_GET['physician'];
+        } else {
+            $physicianfilter = "";
+        }
+        
+         $host = $_SERVER['HTTP_HOST'];
+         $requesturi = substr($_SERVER['REQUEST_URI'], 0, strpos($_SERVER['REQUEST_URI'], '?'));
+         
+         $filterChain = "";
+         $filterExists = false;
+         foreach ($_GET as $key => $value) {
+             if ($key != 'studyid' && $key != 'pharmacist' && $key != 'physician' && $key != 'q' ) {
+                 // must add to the url:
+                 $filterExists = true;
+                 $filterChain = $filterChain . $key."=".$value."&";
+             }
+         }
+         if ($filterExists) {
+             $filterChain = '?'.$filterChain;
+         }
+         
+        
+        $monitor_pep_table  = "<table style='width: 100%; border-style: none !important;background-color:transparent; background-color:#ef5e25;'>
+            <tr>
+                <td style='border-style: none !important;'>
+                   Study ID: <input id='study_id_filter' value='".$studyidfilter."'/>
+                </td>
+                   
+                    
+                <td style='border-style: none !important;'>
+                     Physician: <input id='physician_filter' value='".$physicianfilter."'/>
+                </td>
+                   
+                <td style='border-style: none !important;'>
+                     Pharmacist: <input id='pharmacist_filter' value='".$pharmacistfilter."'/>
+                <td width='100%' style='border-style: none !important;'>
+                   <input type='hidden' value='".$requesturi.$filterChain."' id='urlforfilters'/>
+                   <div id='delete-filters' style='cursor:pointer;font-weight:bold; text-align:right;'>Delete Filters</div>
+                </td>
+                <td width='100%' style='border-style: none !important;'>
+                   <div id='filters' style='cursor:pointer;font-weight:bold;'>Filter</div>
+                </td>
+                </td>
+            </tr>
+            
+        </table>";
+	
+	
+	
+	$header_02 = array(
+            array('data' => t('Study ID'), 'field' => 'study_id'),
+            array('data' => t('Phone Number 01'), 'field' => 'phone_number_01'),
+            array('data' => t('Phone Number 02'), 'field' => 'phone_number_02'),
+            array('data' => t('Pharmacist'), 'field' => 'pharmacist'),
+            array('data' => t('Physician'), 'field' => 'physician'),
+            array('data' => t('Tests(Link to Bendiner)'), 'field' => 'specimen'),
+            array('data' => t('Expected First Clinic Visit Date'), 'field' => 'first_visit_date'),
+            array('data' => t('First Clinic Actual Date'),  'field' => 'first_visit_actual'),
+            
+	    array('data' => t('Expected Second Clinic Visit Date'), 'field' => 'second_visit_date'),
+            array('data' => t('Second Clinic Actual Date'), 'field' => 'second_visit_actual'),
+	    array('data' => t('Expected Third Clinic Visit Date'), 'field' => 'third_visit_date'),
+            array('data' => t('Third Clinic Actual Date'), 'field' => 'third_visit_actual'),
+            array('data' => t('Continue/Discontinue PEP?'),  'field' => 'continue_pep_01'),
+	);
+        
+        // Setting the sort conditions
+        if(isset($_GET['sort']) && isset($_GET['order'])) {
+          // Sort it Ascending or Descending?
+          if($_GET['sort'] == 'asc')
+            $sort = 'ASC';
+          else
+            $sort = 'DESC';
+
+          // Which column will be sorted
+          switch($_GET['order']) {
+            case 'Study ID':
+              $order = 'study_id';
+              break;
+            case 'Phone Number 01':
+              $order = 'phone_number_01';
+              break;
+          case 'Phone Number 02':
+              $order = 'phone_number_02';
+              break;
+          case 'Pharmacist':
+              $order = 'pharmacist';
+              break;
+          case 'Physician':
+              $order = 'physician';
+              break;
+          case 'Tests(Link to Bendiner)':
+              $order = 'specimen';
+              break;
+          case 'Expected First Clinic Visit Date':
+              $order = 'first_visit_date';
+              break;
+          case 'First Clinic Actual Date':
+              $order = 'first_visit_actual';
+              break;       
+          case 'Expected Second Clinic Visit Date':
+              $order = 'second_visit_date';
+              break;
+          case 'Second Clinic Actual Date':
+              $order = 'second_visit_actual';
+              break;          
+          case 'Expected Third Clinic Visit Date':
+              $order = 'third_visit_date';
+              break;
+          case 'Third Clinic Actual Date':
+              $order = 'third_visit_actual';
+              break;
+          case 'Continue/Discontinue PEP?':
+              $order = 'continue_pep_01';
+              break;
+          
+            default:
+              $order = 'study_id';
+          }
+        }
+        else {
+          $sort = 'ASC';
+          $order = 'study_id';
+        }
+        
+        $query = db_select("monitor_pep_form_test_01", "n");
+   
+        // Adding fields
+        $query->fields('n',array('id','study_id','phone_number_01','phone_number_02','pharmacist','physician','specimen','first_visit_date','first_visit_actual',
+            'second_visit_date','second_visit_actual','third_visit_date','third_visit_actual','continue_pep_01'));
+
+        
+        
+        if(isset($_GET['studyid'])) {
+           $query->condition('study_id', $studyidfilter,"=");
+        } 
+        if(isset($_GET['pharmacist'])) {
+             $query->condition('pharmacist', array($pharmacistfilter), 'IN');
+        } 
+        if(isset($_GET['physician'])) {
+              $query->condition('physician', array($physicianfilter), 'IN');
+        } 
+        
+        
+        // Set order by
+        $query->orderBy($order, $sort);
+
+        // Pagination
+        $query = $query->extend('PagerDefault')->limit(5);
+
+        // Executing query
+        $result = $query->execute();
+        $results_02 = $result;
+	$rows_02 = array();	
+	
+	
+	foreach($results_02 AS $result){
+		
+
+             
+            
+		$rows_02[] = array(
+			"<a href=\"/ipepcare/monitor01pepupdate?id=".$result -> id."\">".$result -> study_id."</a>", 
+			$result -> phone_number_01,
+			$result -> phone_number_02,
+			$result -> pharmacist,
+			$result -> physician,
+			$result -> specimen,
+			$result -> first_visit_date,
+			$result -> first_visit_actual,
+			$result -> second_visit_date,
+			$result -> second_visit_actual,
+			$result -> third_visit_date,
+			$result -> third_visit_actual,
+			$result -> continue_pep_01
+		);
+	}
+		
+	$caption_monitor_pep = t('Monitor PEP Dashboard');
+	/*$monitor_pep_table = theme('table', array(
+		'header' => $header_02, 
+		'rows' => $rows_02,
+		'caption' => $caption_monitor_pep
+		)
+	);	
+        */
+        
+      /*  $monitor_pep_table .= theme_table(
+        array(
+          'header' => $header_02,
+          'rows' => $rows_02,
+          'attributes' => array(),
+          'sticky' => true,
+          'caption' => $caption_monitor_pep,
+          'colgroups' => array(),
+          'empty' => t("Table has no row!") // The message to be displayed if table is empty
+        )
+      ).theme('pager');
+        */
+        
+     //   $monitor_pep_table =views_embed_view('monitor_pep_form_test_01', 'page_1');
+    
+	//return $monitor_pep_table;
+	
+}
+
+

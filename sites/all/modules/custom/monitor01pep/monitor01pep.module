@@ -1,0 +1,382 @@
+<?php
+
+/**
+* Implements hook_permission().
+*/ 
+function monitor01pep_permission() {
+  return array(
+    'submit monitor01pep' => array(
+      'title' => t('Submit monitor01pep'), 
+      'description' => t('Sumbit monitor01pep.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */ 
+function monitor01pep_menu() {
+  $items['monitor01pep'] = array(
+    'title' => 'Monitor PEP',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('monitor01pep_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('submit monitor01pep'), //access content, administer user access my_custom_module content 
+  );
+  return $items;
+}
+
+/**
+ * Returns form render array.
+ */
+function monitor01pep_form($form, &$form_state) {
+  
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'monitor01pep') . '/monitor01pep.css',
+  );
+  
+  // PATIENT INFORMATION
+  $form['patient_info'] = array(
+	'#type' => 'fieldset',
+    '#suffix' => '<div id="patient_info_wrapper"></div>',
+    '#title' => t('Patient Info (<span class="expand-collapse" >click to open</span>)'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  
+ /* $form['date_updated'] = array(
+      '#title' => t('Date Updated: '),
+      '#type' => 'hidden',
+      '#required' => FALSE,
+      '#size' => 20,
+	'#maxlength' => 20,
+	'#description' => t('Date Updated'),
+  );
+  */
+  $form['patient_info']['studyid'] = array(
+    '#title' => t('Study ID: '),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#size' => 7,
+	'#maxlength' => 7,
+	'#description' => t('[format must be 7 digits only]'),
+  );
+    
+  $form['patient_info']['date_birth'] = array(
+    '#title' => t('Date of Birth: '),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+
+  );
+  
+   $form['patient_info']['phone_number_01'] = array(
+    '#title' => t('Phone Number(1): '),
+    '#type' => 'textfield',
+    '#size' => 12, '#maxlength' => 12,
+	'#description' => t('[format ex. 212-555-5555]'),
+   );
+  
+  $form['patient_info']['phone_number_02'] = array(
+    '#title' => t('Phone Number(2): '),
+    '#type' => 'textfield',
+    '#size' => 12, '#maxlength' => 12,
+ );
+  
+  $form['patient_info']['pep_request_date'] = array(
+    '#title' => t('PEP Request Date: '),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#size' => 10, '#maxlength' => 10,
+);
+ 
+  
+  $physicians = array();
+  $physicians[] = "-Select-";
+  $result = db_query("select id, physician from dr_physicians")->fetchAll();
+  foreach ($result as $physician) {
+      $physicians[$physician->id] = $physician->physician;
+  }
+  
+  $pharmacists = array();
+  $pharmacists[] = "-Select-";
+  $result = db_query("select id, pharmacist from dr_pharmacists")->fetchAll();
+  foreach ($result as $pharmacist) {
+      $pharmacists[$pharmacist->id] = $pharmacist->pharmacist;
+  }
+
+  
+   $form['patient_info']['pharmacist'] = array(
+   	'#title' => t('Pharmacist'),
+    '#type' => 'select',
+    '#options' => $pharmacists,
+  );
+  
+ 
+  
+  
+   
+  $form['patient_info']['physician'] = array(
+   	'#title' => t('Physician'),
+    '#type' => 'select',
+    '#options' => $physicians,
+  );
+  
+  // SPECIMEN
+  $form['bendiner_lab'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Get Lab Results',
+    '#suffix' => '<div id="bendiner_lab_wrapper"></div>',
+    '#title' => t('Get Lab Results (<span class="expand-collapse" >click to open</span>)'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['bendiner_lab']['specimen'] = array(
+    '#title' => t('Specimen #: '),
+    '#type' => 'textfield',
+    '#prefix' => '<div>',
+    '#description' => '',
+    '#suffix' => '<div id="blab"><a href="https://www.labcorpbeacon.com/results-web/results/authentication/public/login" target="_blank">LabCorp Beacon</a></div></div>',
+    );
+  
+  //First Clinic Visit
+  $form['first_clinic_visit'] = array(
+    '#type' => 'fieldset',
+    '#suffix' => '<div id="first_clinic_visit_wrapper"></div>',
+    '#title' => t('First Clinic Visit (<span class="expand-collapse" >click to open</span>)'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  //FIRST CLINIC VISIT  
+  $form['first_clinic_visit']['first_visit_date'] = array(
+    '#title' => t('Expected first clinic visit date: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+      );
+  
+  $form['first_clinic_visit']['first_visit_time'] = array(
+    '#title' => t('Expected first clinic visit time: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+ );
+  
+  $form['first_clinic_visit']['first_visit_actual'] = array(
+    '#title' => t('First clinic visit actual date: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+   );
+  
+  $form['first_clinic_visit']['continue_pep_01'] = array(
+   	'#title' => t('Continue PEP?'),
+    '#type' => 'select',
+    '#options' => array(
+      '-Select-',
+      'Yes',
+      'No',
+    ),
+  );
+  
+  //Second Clinic Visit
+  $form['second_clinic_visit'] = array(
+    '#type' => 'fieldset',
+    '#suffix' => '<div id="second_clinic_visit_wrapper"></div>',
+    '#title' => t('Second Clinic Visit (<span class="expand-collapse" >click to open</span>)'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  //SECOND CLINIC VISIT  
+  $form['second_clinic_visit']['second_visit_date'] = array(
+    '#title' => t('Expected second clinic visit date: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+ );
+  
+  $form['second_clinic_visit']['second_visit_time'] = array(
+    '#title' => t('Expected second clinic visit time: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+  );
+  
+  $form['second_clinic_visit']['second_visit_actual'] = array(
+    '#title' => t('Second clinic visit actual date: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+  );
+  
+  $form['second_clinic_visit']['continue_pep_02'] = array(
+   	'#title' => t('Continue PEP(2)?'),
+    '#type' => 'select',
+    '#options' => array(
+      '-Select-',
+      'Yes',
+      'No',
+    ),
+  );
+  
+  //Third Clinic Visit
+  $form['third_clinic_visit'] = array(
+    '#type' => 'fieldset',
+    '#suffix' => '<div id="third_clinic_visit_wrapper"></div>',
+    '#title' => t('Third Clinic Visit (<span class="expand-collapse" >click to open</span>)'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  //THIRD CLINIC VISIT  
+  $form['third_clinic_visit']['third_visit_date'] = array(
+    '#title' => t('Expected third clinic visit date: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+   );
+  
+  $form['third_clinic_visit']['third_visit_time'] = array(
+    '#title' => t('Expected third clinic visit time: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+  );
+  
+  $form['third_clinic_visit']['third_visit_actual'] = array(
+    '#title' => t('Third clinic visit actual date: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+  );
+  
+  //PEP Refill
+  $form['pep_refill'] = array(
+    '#type' => 'fieldset',
+    '#suffix' => '<div id="pep_refill_wrapper"></div>',
+    '#title' => t('PEP Refill (<span class="expand-collapse" >click to open</span>)'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  //PEP Refill  
+  $form['pep_refill']['refill_date'] = array(
+    '#title' => t('Refill before this date: '),
+    '#type' => 'textfield',
+    '#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+   );
+  
+  $form['pep_refill']['actual_date_refill'] = array(
+    '#title' => t('Actual return date for refill: '),
+    '#type' => 'textfield',
+   );
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save This Form',
+  );
+  return $form;
+}
+
+/**
+ * form validate: New
+*/ 
+function monitor01pep_form_validate($form, &$form_state) {
+    
+        $study_id = trim($form_state['values']['studyid']);
+        
+        if (strlen($study_id) < 7) {
+		form_set_error('studyid', t('This study id must have at least 7 digits.'));
+	}
+    
+	// Checks validity of Primary Phone Number
+	$phone_number_01 = trim($form_state['values']['phone_number_01']);
+	if (strlen($phone_number_01) < 12) {
+		form_set_error('phone_number_01', t('This phone number must have at least 12 digits.'));
+	}
+	else if (strlen($phone_number_01) > 15) {
+		form_set_error('phone_number_01', t('This phone number as entered is too long; must be less than 15 digits.'));
+	}
+	else if (!preg_match('/^[0-9()-xX\s]+$/', (string) $phone_number_01)) {
+		form_set_error('phone_number_01', t('This phone number can only have digits, parenthesis and dashes. Try again.'));
+	}	
+	
+		// Checks validity of Second Phone Number
+	$phone_number_02 = trim($form_state['values']['phone_number_02']);
+	if (strlen($phone_number_01) < 12) {
+		form_set_error('phone_number_02', t('This phone number must have at least 12 digits.'));
+	}
+	else if (strlen($phone_number_02) > 15) {
+		form_set_error('phone_number_02', t('This phone number as entered is too long; must be less than 15 digits.'));
+	}
+	else if (!preg_match('/^[0-9()-xX\s]+$/', (string) $phone_number_01)) {
+		form_set_error('phone_number_02', t('This phone number can only have digits, parenthesis and dashes. Try again.'));
+	}
+}
+
+/**
+ * Submit handler.
+ */
+function monitor01pep_form_submit($form, &$form_state) {
+  global $user;
+  $date = date('m/d/Y');
+try {
+   $fe_id = db_insert('monitor_pep_form_test_01')
+  	
+  	->fields(array(
+  	
+  	'uid' => $user -> uid, 
+  	
+  	'study_id' => $form_state['values']['studyid'],
+  	'date_birth' => $form_state['values']['date_birth'],
+  	'phone_number_01' => $form_state['values']['phone_number_01'],
+  	'phone_number_02' => $form_state['values']['phone_number_02'],
+  	'pep_request_date' => $form_state['values']['pep_request_date'],
+  	'pharmacist' => $form_state['values']['pharmacist'], 
+  	'physician' => $form_state['values']['physician'], 
+  	'specimen' => $form_state['values']['specimen'],
+  	'first_visit_date' => $form_state['values']['first_visit_date'], 
+  	'first_visit_time' => $form_state['values']['first_visit_time'], 
+  	'first_visit_actual' => $form_state['values']['first_visit_actual'], 
+  	'continue_pep_01' => $form_state['values']['continue_pep_01'], 
+  	'second_visit_date' => $form_state['values']['second_visit_date'], 
+  	'second_visit_time' => $form_state['values']['second_visit_time'], 
+  	'second_visit_actual' => $form_state['values']['second_visit_actual'],  
+  	'continue_pep_02' => $form_state['values']['continue_pep_02'],  
+  	'third_visit_date' => $form_state['values']['third_visit_date'], 
+  	'third_visit_time' => $form_state['values']['third_visit_time'], 
+  	'third_visit_actual' => $form_state['values']['third_visit_actual'], 
+  	'refill_date' => $form_state['values']['refill_date'], 
+  	'actual_date_refill' => $form_state['values']['actual_date_refill'], 
+        'date_updated' => $date,
+  ))-> execute();
+    drupal_set_message(t('Thanks! Your iPEPcare Monitor form has been saved.'));
+}
+catch (PDOException $e) {
+     if (strrpos($e->getMessage(), '23000')>0) { 
+        drupal_set_message(t('Error: %message', array('%message' => 'Duplicate entry for "Study ID" field.')), 'error');
+     } else {
+         drupal_set_message(t('Error: %message', array('%message' => $e->getMessage())), 'error');
+     }
+  
+}
+ 
+}
+
+function display_monitor01pep_page()
+{
+    $db_result = db_query( "select name from {monitor_pep_form_test_01} ");
+    $header = array("Color Name");
+    // create array and add one element called data
+    $rows['data'] = array();
+    while ($row = db_fetch_object($db_result)) {
+        $rows[] = array($row->name);
+    }
+    if (count($rows) == 1)
+        $rows[] = array("No Colors Entered Yet");
+ 
+    $link_to_add_form = l('Add More Colors','my_color/data_entry_form');
+ 
+    return theme_table($header, $rows).'<br/>'.$link_to_add_form;
+}
+
+/**
+ * Menu callback.
+ */
+function monitor01pep_page() {
+  return drupal_get_form('monitor01pep_form');
+}

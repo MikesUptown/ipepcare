@@ -1,0 +1,6 @@
+name = Study Checklist
+description = A Module which provides infomation of study checklist 
+core = 7.x
+package = iPEPcare Module Development
+files[] = checklist.module
+php = 5.2

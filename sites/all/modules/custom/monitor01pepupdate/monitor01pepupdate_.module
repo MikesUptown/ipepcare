@@ -1,0 +1,423 @@
+<?php
+
+/**
+* Implements hook_permission().
+*/ 
+function monitor01pepupdate_permission() {
+return array(
+'submit monitor01pepupdate' => array(
+'title' => t('Submit monitor01pepupdate'), 
+'description' => t('Submit monitor01pepupdate'),
+),
+);
+}
+
+/**
+* Implements hook_menu().
+*/ 
+function monitor01pepupdate_menu() {
+$items['monitor01pepupdate/%'] = array(
+'title' => 'Monitor PEP Update Form',
+'type' => MENU_NORMAL_ITEM,
+'page callback' => 'monitor01pepupdate_page',
+'page arguments'   => array(1),
+'access callback' => 'user_access',
+'access arguments' => array('submit monitor01pepupdate'), //access content, administer user access my_custom_module content 
+);
+
+	return $items;
+
+}
+
+/**
+* Returns form render array.
+*/
+function monitor01pepupdate_form($form, &$form_state) {
+     
+global $id_form;
+    
+    global $previousUrl;
+    $previousUrl= $_SERVER['HTTP_REFERER'];
+	
+	if(isset($form_state['values']) && $form_state['values']['id']){
+		$id = $form_state['values']['studyid'];
+	}else if (isset($_GET['id'])){
+		$id = $_GET['id'];
+	}else{
+		$id=0;
+	}
+	
+	// require('connect.php');
+
+	$name = "";
+
+	$result = db_query('SELECT * FROM {monitor_pep_form_test_01} WHERE study_id=' . $id_form );
+	$record= $result -> fetchObject();
+	
+	$id = $record -> id; 
+	$sid = $record -> study_id; 
+	$dob = $record -> date_birth;
+	$pn01 = $record -> phone_number_01;
+	$pn02 = $record -> phone_number_02;
+	$prd = $record -> pep_request_date;
+	
+	$pharm = $record -> pharmacist;
+	$phys = $record -> physician;
+	$spm = $record -> specimen;
+	
+	$fvd = $record -> first_visit_date;
+	$fvt = $record -> first_visit_time;
+	$fva = $record -> first_visit_actual;
+	$cp01 = $record -> continue_pep_01;
+	
+	$svd = $record -> second_visit_date;
+	$svt = $record -> second_visit_time;
+	$sva = $record -> second_visit_actual;
+	$cp02 = $record -> continue_pep_02;
+	
+	$tvd = $record -> third_visit_date;
+	$tvt = $record -> third_visit_time;
+	$tva = $record -> third_visit_actual;
+	$rd = $record -> refill_date;
+	$adr = $record -> actual_date_refill;
+	
+
+$form['#attached']['css'] = array(
+drupal_get_path('module', 'monitor01pepupdate') . '/monitor01pepupdate.css',
+);
+
+// PATIENT INFORMATION
+$form['patient_info'] = array(
+	'#type' => 'fieldset',
+'#suffix' => '<div id="patient_info_wrapper"></div>',
+'#title' => t('Patient Info (<span class="expand-collapse" >click to close</span>)'),
+'#collapsible' => TRUE,
+'#collapsed' => FALSE,
+
+);
+
+$form['patient_info']['id'] = array(
+'#type' => 'hidden',
+'#required' => TRUE,
+'#value' => t($id)
+);
+
+$form['patient_info']['studyid'] = array(
+'#title' => t('Study ID: '),
+'#type' => 'textfield',
+'#required' => TRUE,
+'#size' => 7,
+	'#maxlength' => 7,
+	'#description' => t('[do not change this number]'),
+	'#value' => t($sid),
+);
+
+$form['patient_info']['date_birth'] = array(
+'#title' => t('Date of Birth: '),
+'#type' => 'textfield',
+'#required' => TRUE,
+'#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+	'#value' => t($dob),
+);
+
+$form['patient_info']['phone_number_01'] = array(
+'#title' => t('Phone Number(1): '),
+'#type' => 'textfield',
+'#size' => 12, '#maxlength' => 12,
+	'#description' => t('[format ex. 212-555-5555]'),
+	'#value' => t($pn01),
+);
+
+$form['patient_info']['phone_number_02'] = array(
+'#title' => t('Phone Number(2): '),
+'#type' => 'textfield',
+'#size' => 12, '#maxlength' => 12,
+'#value' => t($pn02),
+);
+
+$form['patient_info']['pep_request_date'] = array(
+'#title' => t('PEP Request Date: '),
+'#type' => 'textfield',
+'#required' => TRUE,
+'#size' => 10, '#maxlength' => 10,
+'#value' => t($prd),
+);
+
+
+ $physicians = array();
+  $physicians[] = "-Select-";
+  $result = db_query("select id, physician from dr_physicians")->fetchAll();
+  foreach ($result as $physician) {
+      $physicians[$physician->id] = $physician->physician;
+  }
+  
+  $pharmacists = array();
+  $pharmacists[] = "-Select-";
+  $result = db_query("select id, pharmacist from dr_pharmacists")->fetchAll();
+  foreach ($result as $pharmacist) {
+      $pharmacists[$pharmacist->id] = $pharmacist->pharmacist;
+  }
+  
+  
+$form['patient_info']['pharmacist'] = array(
+	'#title' => t('Pharmacist'),
+'#type' => 'select',
+'#options' => $pharmacists,
+'#value' => t($pharm),
+);
+
+$form['patient_info']['physician'] = array(
+	'#title' => t('Physician'),
+'#type' => 'select',
+'#options' => $physicians,
+'#value' => t($phys),
+);
+
+// SPECIMEN
+$form['bendiner_lab'] = array(
+'#type' => 'fieldset',
+'#title' => 'Bendiner Lab Result',
+'#suffix' => '<div id="bendiner_lab_wrapper"></div>',
+'#title' => t('Bendiner Lab (<span class="expand-collapse" >click to close</span>)'),
+'#collapsible' => TRUE,
+'#collapsed' => FALSE,
+);
+
+$form['bendiner_lab']['specimen'] = array(
+'#title' => t('Specimen #: '),
+'#type' => 'textfield',
+'#description' => t('[https://bendinerweb.com/]'),
+'#value' => t($spm),
+);
+
+//First Clinic Visit
+$form['first_clinic_visit'] = array(
+'#type' => 'fieldset',
+'#suffix' => '<div id="first_clinic_visit_wrapper"></div>',
+'#title' => t('First Clinic Visit (<span class="expand-collapse" >click to close</span>)'),
+'#collapsible' => TRUE,
+'#collapsed' => FALSE,
+);
+
+//FIRST CLINIC VISIT  
+$form['first_clinic_visit']['first_visit_date'] = array(
+'#title' => t('Expected first clinic visit date: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#value' => t($fvd),
+);
+
+$form['first_clinic_visit']['first_visit_time'] = array(
+'#title' => t('Expected first clinic visit time: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#value' => t($fvt),
+);
+
+$form['first_clinic_visit']['first_visit_actual'] = array(
+'#title' => t('First clinic visit actual date: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#value' => t($fva),
+);
+
+$form['first_clinic_visit']['continue_pep_01'] = array(
+	'#title' => t('Continue PEP?'),
+'#type' => 'select',
+'#options' => array(
+'-Select-',
+'Yes',
+'No',
+),
+'#value' => t($cp01),
+);
+
+//Second Clinic Visit
+$form['second_clinic_visit'] = array(
+'#type' => 'fieldset',
+'#suffix' => '<div id="second_clinic_visit_wrapper"></div>',
+'#title' => t('Second Clinic Visit (<span class="expand-collapse" >click to close</span>)'),
+'#collapsible' => TRUE,
+'#collapsed' => FALSE,
+);
+
+//SECOND CLINIC VISIT  
+$form['second_clinic_visit']['second_visit_date'] = array(
+'#title' => t('Expected second clinic visit date: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+	'#description' => t('[format ex. 01/01/2013]'),
+	'#value' => t($svd),
+);
+
+$form['second_clinic_visit']['second_visit_time'] = array(
+'#title' => t('Expected second clinic visit time: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#value' => t($svt),
+);
+
+$form['second_clinic_visit']['second_visit_actual'] = array(
+'#title' => t('Second clinic visit actual date: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#value' => t($sva),
+);
+
+$form['second_clinic_visit']['continue_pep_02'] = array(
+	'#title' => t('Continue PEP(2)?'),
+'#type' => 'select',
+'#options' => array(
+'-Select-',
+'Yes',
+'No',
+),
+'#value' => t($cp02),
+);
+
+//Third Clinic Visit
+$form['third_clinic_visit'] = array(
+'#type' => 'fieldset',
+'#suffix' => '<div id="third_clinic_visit_wrapper"></div>',
+'#title' => t('Third Clinic Visit (<span class="expand-collapse" >click to close</span>)'),
+'#collapsible' => TRUE,
+'#collapsed' => FALSE,
+);
+
+//THIRD CLINIC VISIT  
+$form['third_clinic_visit']['third_visit_date'] = array(
+'#title' => t('Expected third clinic visit date: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#description' => t('[format ex. 01/01/2013]'),
+'#value' => t($tvd),
+);
+
+$form['third_clinic_visit']['third_visit_time'] = array(
+'#title' => t('Expected third clinic visit time: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#value' => t($tvt),
+);
+
+$form['third_clinic_visit']['third_visit_actual'] = array(
+'#title' => t('Third clinic visit actual date: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#value' => t($tva),
+);
+
+//PEP Refill
+$form['pep_refill'] = array(
+'#type' => 'fieldset',
+'#suffix' => '<div id="pep_refill_wrapper"></div>',
+'#title' => t('PEP Refill (<span class="expand-collapse" >click to close</span>)'),
+'#collapsible' => TRUE,
+'#collapsed' => FALSE,
+);
+
+//PEP Refill  
+$form['pep_refill']['refill_date'] = array(
+'#title' => t('Refill before this date: '),
+'#type' => 'textfield',
+'#size' => 10, '#maxlength' => 10,
+'#description' => t('[format ex. 01/01/2013]'),
+'#value' => t($rd),
+);
+
+$form['pep_refill']['actual_date_refill'] = array(
+'#title' => t('Actual return date for refill: '),
+'#type' => 'textfield',
+'#value' => t($adr),
+);
+
+$form['submit'] = array(
+'#type' => 'submit',
+'#value' => 'Save Monitor PEP Update Form',
+);
+return $form;
+}
+
+/**
+* Implementation of hook_theme().
+*/
+function monitor01pepupdate_theme() {
+	
+	return array(
+'monitor01pepupdate_theme' => array(
+'render element' => 'form'
+),
+);
+	
+}
+
+
+/**
+* Submit handler.
+*/
+
+function monitor01pepupdate_form_submit($form, &$form_state) {
+	global $user;
+  $date = date('m/d/Y');
+$num_updated = db_update('monitor_pep_form_test_01') // Table name no longer needs {}
+  ->fields(array(
+	'uid' => $user -> uid, 
+	'study_id' => $form_state['input']['studyid'],
+	'date_birth' => $form_state['input']['date_birth'],
+	'phone_number_01' => $form_state['input']['phone_number_01'],
+	'phone_number_02' => $form_state['input']['phone_number_02'],
+	'pep_request_date' => $form_state['input']['pep_request_date'],
+	'pharmacist' => $form_state['input']['pharmacist'], 
+	'physician' => $form_state['input']['physician'], 
+	'specimen' => $form_state['input']['specimen'],
+	'first_visit_date' => $form_state['input']['first_visit_date'], 
+	'first_visit_time' => $form_state['input']['first_visit_time'], 
+	'first_visit_actual' => $form_state['input']['first_visit_actual'], 
+	'continue_pep_01' => $form_state['input']['continue_pep_01'], 
+	'second_visit_date' => $form_state['input']['second_visit_date'], 
+	'second_visit_time' => $form_state['input']['second_visit_time'], 
+	'second_visit_actual' => $form_state['input']['second_visit_actual'],  
+	'continue_pep_02' => $form_state['input']['continue_pep_02'],  
+	'third_visit_date' => $form_state['input']['third_visit_date'], 
+	'third_visit_time' => $form_state['input']['third_visit_time'], 
+	'third_visit_actual' => $form_state['input']['third_visit_actual'], 
+	'refill_date' => $form_state['input']['refill_date'], 
+	'actual_date_refill' => $form_state['input']['actual_date_refill'],
+      'date_updated' => $date,
+  ))
+  	// ->condition('id', $form_state['input']['id'],"=")
+	->condition('study_id', $form_state['input']['studyid'],"=")
+  	->execute();
+
+ global $previousUrl;
+    
+$form_state['redirect'] = 'dashboard/monitor_pep';
+
+drupal_set_message(t('Thanks! Your iPEPcare Monitor Update form has been saved.'));
+}
+
+function display_monitor01pepupdate_page()
+{
+$db_result = db_query( "select name from {monitor_pep_form_test_01} ");
+$header = array("Color Name");
+$rows['data'] = array();
+while ($row = db_fetch_object($db_result)) {
+$rows[] = array($row->name);
+}
+if (count($rows) == 1)
+$rows[] = array("No Colors Entered Yet");
+
+$link_to_add_form = l('Add More Colors','my_color/data_entry_form');
+
+return theme_table($header, $rows).'<br/>'.$link_to_add_form;
+}
+
+/**
+* Menu callback.
+*/
+function monitor01pepupdate_page($id_form_aux) {
+global $id_form;
+$id_form = $id_form_aux;
+return drupal_get_form('monitor01pepupdate_form');
+}

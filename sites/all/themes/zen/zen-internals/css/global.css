@@ -1,0 +1,173 @@
+/**
+ * @file
+ * Global Styling
+ *
+ * We provide some sane print styling for Drupal using Zen's layout method.
+ */
+
+ .node-type-checklist .title {
+     display:none;
+ }
+ 
+ .node-type-checklist #title-checklist-page {
+background-color: #ef5e25;
+color: #fff;
+font-weight: bold;
+
+padding-top: 10px;
+padding-left: 10px;
+padding-bottom: 10px;
+ }
+ 
+ .node-type-checklist #body-checklist-page {
+     font-size: 10pt;
+ }
+ 
+ #block-block-2 .block-title {
+    color: #fff;
+    font-weight: bold;
+    font-size: 10pt;
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-bottom: 10px;
+    background-color: #777;
+ }
+ 
+ #latest-updates-block {
+     min-height: 200px;
+     background-color: #ccc;
+ }
+ 
+ #body-checklist-page {
+     font-size: 10pt;
+ }
+ 
+ .li-first {
+     margin-top: 30px;
+ }
+ 
+ #block-system-navigation .block-title {
+     display: none;
+ }
+ 
+ .menu {
+     padding: 0 0 0 0px;
+ }
+ .menu li {
+    list-style: none !important;
+    color: #fff;
+    padding-left: 10px;
+    padding-bottom: 5px;
+    margin-bottom: 1px;
+ }
+ 
+  .menu li {
+     background-image: url("../images/menu-deselected.jpg");
+     background-repeat: repeat-x;
+ }
+ 
+ .menu .active-trail {
+     background-image: url("../images/menu-selected.jpg");
+     background-repeat: repeat-x;
+ }
+ 
+ .menu li a {
+     color: #fff;
+     text-decoration: none;
+     font-size: 10pt;
+ }
+ 
+ .menu li .menu {
+     margin-left: -10px;
+     margin-top: 5px;
+     
+     margin-left: 20px;
+    margin-right: 30px;
+    font-size: 10pt;
+ }
+ 
+ .menu li .menu li {
+     height: 22px;
+ }
+ 
+ #node-15 #title-checklist-page {
+     display:none;
+ }
+ 
+ 
+ /** HELP CENTER PAGE */
+ 
+ .page-help-center #content h1 {
+     background-color: #ef5e25;
+    color: #fff;
+    font-weight: bold;
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-bottom: 10px;
+    margin-top: 24px;
+ }
+ 
+ .page-help-center #content .form-submit {
+      margin-top: 0em !important;
+ }
+ 
+ .page-help-center #content .view-content {
+     padding-top: 50px;
+ }
+ 
+ .page-help-center #content .views-exposed-widgets {
+     float:right;
+ }
+ 
+ .teaser-hc-top {
+      background-color: #ef5e25;
+    color: #fff;
+    font-weight: bold;
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+ }
+ 
+ .teaser-hc-body {
+     font-size: 8pt;
+ }
+ 
+ .teaser-hc-left {
+     margin-bottom: 20px;
+     width: 100%;
+ }
+ 
+ .teaser-hc-right {
+     width: 100%;
+     text-align: center;
+ }
+ 
+ .pp_social {
+     display: none;
+ }
+
+.not-logged-in .tabs {
+    display: none;
+}
+.not-logged-in #logo {
+     display: none;
+ }
+ 
+ 
+ 
+ /** forms monitor pep link berdiner*/
+ #blab {
+    float: left;
+    padding-top: 40px;
+    margin-left: 200px;
+ }
+ 
+.page-monitor01pepupdate .form-item-specimen {
+     float:left;
+}
+
+.page-monitor01pep .form-item-specimen {
+     float:left;
+}
+ /** end forms monitor pep link berdiner*/

@@ -1,0 +1,152 @@
+<?php
+
+/**
+ * @file
+ *
+ * Created by http://www.thecarneyeffect.co.uk/
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function form01table_menu() {
+
+  $items['form_table'] = array(
+    'title' => 'Nesting Menu Test', 
+    'page callback' => 'nesting_menu',
+    'access callback' => TRUE,
+    
+  );
+  
+  $items['form_table/nesting_menu'] = array(
+    'title' => 'Form Table Example',
+    'page callback' => 'form01table_page',
+    'access callback' => TRUE,
+  );
+
+  return $items;
+}
+
+function nesting_menu(){
+	return t('Test: nesting menu');
+}
+
+/**
+ * Form: Form Table Example.
+ */
+function form01table_form($form, &$form_state) {
+	
+	// Get the path to the module
+	$path = drupal_get_path('module', 'form01table');
+
+	// Attach the CSS and JS to the form
+	$form['#attached'] = array('css' => array('type' => 'file', 'data' => $path . '/form01table.css', ),
+	
+	);
+	
+  $red_dwarf = array(
+    array(
+      'name' => 'Dave Lister',
+      'type' => 'Human',
+      'rank' => 1,
+    ),
+    array(
+      'name' => 'Arnold Rimmer',
+      'type' => 'Hologram',
+  		'rank' => 2,
+    ),
+    array(
+      'name' => 'Cat',
+      'type' => 'Humanoid',
+  		'rank' => 3,
+    ),
+    array(
+      'name' => 'Kryten',
+      'type' => 'Android',
+  		'rank' => 4,
+    ),
+  );
+  
+  $form['characters'] = array(
+    '#prefix' => '<div id="red-dwarf">',
+    '#suffix' => '</div>',
+    '#tree' => TRUE,
+    '#theme' => 'form01table_ipepcare'
+  );
+  
+  foreach ($red_dwarf as $key => $characters) {
+    $form['characters'][$key]['name'] = array(
+      '#type' => 'textfield',
+      // '#title' => t('Study ID (New): '), 
+      '#default_value' => $characters['name'],
+    );
+    $form['characters'][$key]['type'] = array(
+      '#type' => 'textfield',
+      '#default_value' => $characters['type'],
+    );
+    $form['characters'][$key]['weight'] = array(
+      '#type' => 'textfield',
+      '#default_value' => $characters['rank'],
+      '#size' => 3,
+    	'#attributes' => array('class' => array('rank-weight')),
+    );
+  }
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function form01table_theme($existing, $type, $theme, $path) {
+  return array(
+    'form01table_ipepcare' => array(
+      'render element' => 'element'
+    ),
+  );
+}
+
+function theme_form01table_ipepcare($vars) {
+  $element = $vars['element'];
+  drupal_add_tabledrag('form_id', 'order', 'sibling', 'rank-weight');
+  
+  $header = array(
+    'name' => t('Name'), 
+    'type' => t('Type'),
+  	'weight' => t('Rank'),
+  );
+  
+  $rows = array();
+  foreach (element_children($element) as $key) {
+    $row = array();
+    
+    $row['data'] = array();
+    foreach ($header as $fieldname => $title) {
+      $row['data'][] = drupal_render($element[$key][$fieldname]);
+      $row['class'] = array('draggable');
+    }
+    $rows[] = $row;
+  }
+  
+  return theme('table', array(
+  	'header' => $header, 
+  	'rows' => $rows,
+  	'attributes' => array('id' => 'form_id'),
+  	'empty' => '',
+    'sticky' => FALSE,
+  ));
+}
+
+
+/**
+ * Menu callback.
+ */
+function form01table_page() {
+  return drupal_get_form('form01table_form');
+}
+

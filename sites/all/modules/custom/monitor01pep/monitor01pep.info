@@ -1,0 +1,7 @@
+name = Monitor PEP Form
+package = iPEPcare Module Development
+core = 7.x
+
+stylesheets[all][] = css/prettyPhoto.css
+scripts[] = js/jquery.prettyPhoto.js
+scripts[] = js/prettyPhotoCommon.js
